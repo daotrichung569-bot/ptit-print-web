@@ -1,0 +1,2663 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PTIT Print - Đặt In &amp; Nhận Tài Liệu Nội Bộ Sinh Viên PTIT</title>
+  <!-- Supabase JS v2: kết nối cơ sở dữ liệu dùng chung -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Tải Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tải Font Inter hỗ trợ tiếng Việt đẹp, rõ nét -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#FEF2F2',
+              100: '#FEE2E2',
+              200: '#FECACA',
+              500: '#EF4444',
+              600: '#DC2626',
+              700: '#B91C1C',
+              800: '#991B1B',
+              900: '#7F1D1D',
+            }
+          },
+          boxShadow: {
+            'soft': '0 10px 30px -10px rgba(185, 28, 28, 0.14)',
+            'card': '0 4px 20px -2px rgba(185, 28, 28, 0.06)',
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #FFFDFD;
+      color: #111827;
+    }
+
+    .dropzone-active {
+      border-color: #DC2626 !important;
+      background-color: #FEF2F2 !important;
+      transform: scale(1.005);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.28s ease-out forwards;
+    }
+
+    body.high-contrast-mode {
+      background-color: #FFFFFF;
+      color: #111827;
+    }
+    body.high-contrast-mode .surface-card {
+      border-color: #DC2626 !important;
+      box-shadow: none !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#FFFDFD] text-gray-900 antialiased selection:bg-red-600 selection:text-white">
+
+  <!-- Toast / Thông báo nổi thay thế alert() -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+
+  <!-- 1. THANH ĐIỀU HƯỚNG ĐẦU TRANG -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-red-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <a href="#" class="flex items-center gap-2.5 group focus:outline-none">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-700 to-red-500 flex items-center justify-center text-white shadow-md shadow-red-600/20 group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+          </div>
+          <div class="flex flex-col">
+            <span class="font-extrabold text-lg tracking-tight leading-none">
+              <span class="text-red-600">PTIT</span> <span class="text-gray-900">Print</span>
+            </span>
+            <span class="text-[11px] font-semibold text-red-700 tracking-wide mt-0.5">Đặt In Nội Bộ • Học viện PTIT</span>
+          </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-1 lg:gap-2">
+          <a href="#dat-in" class="px-3.5 py-2 rounded-lg text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 transition-colors">
+            Đặt in tài liệu
+          </a>
+          <a href="#tra-cuu" class="px-3.5 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-red-700 hover:bg-red-50/70 transition-colors flex items-center gap-1.5">
+            <span>Tra cứu đơn PTIT</span>
+            <span id="navOrderCount" class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-800">3</span>
+          </a>
+          <a href="#bang-gia" class="px-3.5 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-red-700 hover:bg-red-50/70 transition-colors">
+            Bảng giá sinh viên
+          </a>
+          <a href="#faq" class="px-3.5 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-red-700 hover:bg-red-50/70 transition-colors">
+            Hỏi đáp PTIT
+          </a>
+        </nav>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="toggleVisualModeBtn"
+            title="Chuyển chế độ hiển thị trực quan (Tương phản cao)"
+            class="p-2.5 rounded-xl border border-red-200 text-red-700 hover:text-white hover:bg-red-600 hover:border-red-600 transition-all"
+            aria-label="Chuyển chế độ hiển thị trực quan"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+
+          <a href="#dat-in" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-sm shadow-red-600/25 transition-all">
+            <span>Đặt in ngay</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="flex md:hidden items-center justify-between gap-1.5 py-2 border-t border-red-100 overflow-x-auto text-xs font-semibold">
+        <a href="#dat-in" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 whitespace-nowrap">Đặt in</a>
+        <a href="#tra-cuu" class="px-3 py-1.5 rounded-lg bg-red-50/60 text-gray-800 hover:text-red-700 whitespace-nowrap">Tra cứu đơn</a>
+        <a href="#bang-gia" class="px-3 py-1.5 rounded-lg bg-red-50/60 text-gray-800 hover:text-red-700 whitespace-nowrap">Bảng giá</a>
+        <a href="#faq" class="px-3 py-1.5 rounded-lg bg-red-50/60 text-gray-800 hover:text-red-700 whitespace-nowrap">Hỏi đáp</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <!-- 2. PHẦN GIỚI THIỆU (HERO) -->
+    <section class="relative overflow-hidden bg-gradient-to-b from-red-50/90 via-white to-[#FFFDFD] pt-10 pb-12 lg:pt-14 lg:pb-16 border-b border-red-100">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div class="lg:col-span-8 space-y-5">
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-800 text-xs sm:text-sm font-semibold">
+              <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+              <span>Hệ thống Đặt In &amp; Nhận Tài Liệu Nội Bộ Sinh Viên PTIT • 6h30 – 18h30</span>
+            </div>
+
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-gray-900 leading-[1.15]">
+              Đặt in tài liệu PTIT online — <span class="text-red-600">Nhận ngay tại trường</span> trước giờ vào lớp
+            </h1>
+
+            <p class="text-base sm:text-lg text-gray-700 max-w-2xl leading-relaxed">
+              Dành riêng cho sinh viên Học viện Công nghệ Bưu chính Viễn thông: gửi slide bài giảng, đề cương, tiểu luận, báo cáo đồ án hay tài liệu GDQP&amp;AN và lấy trực tiếp tại cơ sở đào tạo mà không cần đi quán photo bên ngoài.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-red-100 shadow-card surface-card">
+                <div class="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 font-bold">1</div>
+                <div>
+                  <p class="text-sm font-bold text-gray-900">Chủ động trước ca học</p>
+                  <p class="text-xs text-gray-600 mt-0.5">Đặt trước giờ vào tiết, ghé lấy nhanh giữa các ca</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-red-100 shadow-card surface-card">
+                <div class="w-9 h-9 rounded-xl bg-red-100 text-red-700 flex items-center justify-center shrink-0 font-bold">2</div>
+                <div>
+                  <p class="text-sm font-bold text-gray-900">Điểm nhận tại PTIT</p>
+                  <p class="text-xs text-gray-600 mt-0.5">Cơ sở Trần Phú (Tòa A1, A2, A3 theo tầng) &amp; Cơ sở Ngọc Trục</p>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-red-100 shadow-card surface-card">
+                <div class="w-9 h-9 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-center justify-center shrink-0 font-bold">3</div>
+                <div>
+                  <p class="text-sm font-bold text-gray-900">Chi phí minh bạch</p>
+                  <p class="text-xs text-gray-600 mt-0.5">Tự động tính theo số trang, loại in &amp; đóng gáy</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-4">
+            <div class="rounded-2xl bg-white border border-red-200/80 p-5 shadow-soft surface-card space-y-4">
+              <div class="flex items-center justify-between border-b border-red-100 pb-3">
+                <span class="text-sm font-bold text-gray-900">Điểm nhận nội bộ PTIT</span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                  ● Đang mở quầy
+                </span>
+              </div>
+
+              <ul class="space-y-3 text-sm">
+                <li class="flex items-center justify-between gap-2">
+                  <span class="text-gray-800 font-medium">🏛️ Trần Phú: Tòa A1 (Tầng 1 – 5)</span>
+                  <span class="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md">~15 phút</span>
+                </li>
+                <li class="flex items-center justify-between gap-2">
+                  <span class="text-gray-800 font-medium">🏢 Trần Phú: Tòa A2 (Tầng 1 – 12)</span>
+                  <span class="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md">~15 phút</span>
+                </li>
+                <li class="flex items-center justify-between gap-2">
+                  <span class="text-gray-800 font-medium">📚 Trần Phú: Tòa A3 (Tầng 1 – 5)</span>
+                  <span class="text-xs font-semibold text-red-800 bg-red-100/70 px-2 py-0.5 rounded-md">~20 phút</span>
+                </li>
+                <li class="flex items-center justify-between gap-2">
+                  <span class="text-gray-800 font-medium">🏫 Cơ sở Ngọc Trục (Quầy nhận nội bộ)</span>
+                  <span class="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md">~20 phút</span>
+                </li>
+              </ul>
+
+              <div class="pt-2 border-t border-red-100 flex items-center justify-between text-xs text-gray-600">
+                <span>Mặc định tối ưu: <strong class="text-gray-900">In 2 mặt A4</strong></span>
+                <a href="#dat-in" class="font-semibold text-red-600 hover:text-red-800 hover:underline">Đặt in ngay →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. KHU VỰC ĐẶT IN CHÍNH -->
+    <section id="dat-in" class="w-full max-w-[1440px] mr-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+      <div class="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-red-600">Đặt in nội bộ PTIT</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">Tạo đơn in tài liệu &amp; xem chi phí tạm tính</h2>
+          <p class="text-sm text-gray-600 mt-1">Chọn điểm nhận tại PTIT ở bảng bên trái, tải file học tập (Slide, Đề cương, Tiểu luận, Đồ án, GDQP&amp;AN) và cấu hình quy cách in.</p>
+        </div>
+
+        <button
+          type="button"
+          id="loadSampleFilesBtn"
+          class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          <span>Nạp tài liệu mẫu PTIT</span>
+        </button>
+      </div>
+
+      <form id="printOrderForm" class="grid grid-cols-1 lg:grid-cols-12 gap-6 xl:gap-8 items-start">
+        <div class="lg:col-span-7 space-y-6 min-w-0">
+          <!-- KHỐI 1: CƠ SỞ & ĐIỂM NHẬN -->
+          <div class="bg-white rounded-2xl border-2 border-red-200 p-5 sm:p-6 shadow-card surface-card space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-red-100">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-red-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                <span>Cơ sở &amp; điểm nhận tài liệu tại PTIT</span>
+              </h3>
+              <span id="pickupPreviewBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 border border-red-200 text-xs font-semibold text-red-800">
+                📍 Cơ sở Trần Phú (Hà Đông) • Tòa A1 • Tầng 1
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <label class="relative flex items-start gap-3 p-4 rounded-xl border-2 border-red-600 bg-red-50/50 cursor-pointer transition-all campus-option-card">
+                <input type="radio" name="ptitCampus" value="tran_phu" checked class="mt-1 w-4 h-4 text-red-600 focus:ring-red-600 shrink-0" />
+                <div class="min-w-0">
+                  <p class="text-sm font-bold text-gray-900">1. Cơ sở Trần Phú (Hà Đông)</p>
+                  <p class="text-xs text-gray-600 mt-0.5">Chọn tòa nhà A1, A2, A3 &amp; tầng nhận trực tiếp</p>
+                </div>
+              </label>
+
+              <label class="relative flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-red-300 bg-white cursor-pointer transition-all campus-option-card">
+                <input type="radio" name="ptitCampus" value="ngoc_truc" class="mt-1 w-4 h-4 text-red-600 focus:ring-red-600 shrink-0" />
+                <div class="min-w-0">
+                  <p class="text-sm font-bold text-gray-900">2. Cơ sở Ngọc Trục</p>
+                  <p class="text-xs text-gray-600 mt-0.5">Nhận tại điểm giao nhận nội bộ Cơ sở Ngọc Trục</p>
+                </div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch pt-1">
+              <div id="tranPhuSubSelectors" class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-red-50/40 border border-red-100">
+                <div>
+                  <label for="tranPhuBuilding" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-1.5">
+                    Tòa nhà (Trần Phú)
+                  </label>
+                  <select
+                    id="tranPhuBuilding"
+                    class="w-full px-3 py-2.5 rounded-xl border border-red-200 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                  >
+                    <option value="A1" selected>Tòa A1 (Tầng 1 – 5)</option>
+                    <option value="A2">Tòa A2 (Tầng G, 1 – 12)</option>
+                    <option value="A3">Tòa A3 (Tầng 1 – 5)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="tranPhuFloor" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-1.5">
+                    Tầng nhận tài liệu
+                  </label>
+                  <select
+                    id="tranPhuFloor"
+                    class="w-full px-3 py-2.5 rounded-xl border border-red-200 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                  >
+                    <option value="1" selected>Tầng 1</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="ngocTrucSubSelector" class="hidden p-3.5 rounded-xl bg-red-50/40 border border-red-100">
+                <label for="ngocTrucPoint" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-1.5">
+                  Điểm nhận tại Cơ sở Ngọc Trục
+                </label>
+                <select
+                  id="ngocTrucPoint"
+                  class="w-full px-3 py-2.5 rounded-xl border border-red-200 text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                >
+                  <option value="Quầy nhận tài liệu Tầng 1 - Cơ sở Ngọc Trục" selected>Quầy nhận tài liệu Tầng 1 - Cơ sở Ngọc Trục</option>
+                  <option value="Sảnh giảng đường - Cơ sở Ngọc Trục">Sảnh giảng đường - Cơ sở Ngọc Trục</option>
+                </select>
+              </div>
+
+              <div class="p-3.5 rounded-xl bg-gray-50/80 border border-gray-200/80 space-y-2.5">
+                <div class="flex items-center justify-between gap-2">
+                  <label class="block text-xs font-bold uppercase tracking-wide text-gray-700">
+                    Khung giờ nhận dự kiến
+                  </label>
+                  <span class="text-[11px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-md">
+                    06:30 – 18:30
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label for="pickupDate" class="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Ngày nhận (dd/mm/yyyy)
+                    </label>
+                    <input
+                      type="date"
+                      id="pickupDate"
+                      class="w-full px-3 py-2 rounded-xl border border-gray-300 text-xs sm:text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-[11px] font-semibold text-gray-600 mb-1">
+                      Giờ nhận (Giờ : Phút)
+                    </label>
+                    <div class="flex items-center gap-1.5">
+                      <select
+                        id="pickupHour"
+                        aria-label="Giờ nhận"
+                        class="w-full px-2.5 py-2 rounded-xl border border-gray-300 text-xs sm:text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                      >
+                        <option value="06">06h</option><option value="07">07h</option><option value="08">08h</option><option value="09">09h</option><option value="10">10h</option><option value="11">11h</option><option value="12" selected>12h</option><option value="13">13h</option><option value="14">14h</option><option value="15">15h</option><option value="16">16h</option><option value="17">17h</option><option value="18">18h</option>
+                      </select>
+                      <span class="font-bold text-gray-700">:</span>
+                      <select
+                        id="pickupMinute"
+                        aria-label="Phút nhận"
+                        class="w-full px-2.5 py-2 rounded-xl border border-gray-300 text-xs sm:text-sm font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                      >
+                        <option value="30" selected>30p</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <p id="pickupTimeHelper" class="text-[11px] text-gray-600">
+                  Thời gian nhận hợp lệ từ <strong class="text-red-700">06:30</strong> đến <strong class="text-red-700">18:30</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- KHỐI 2: TÀI LIỆU HỌC TẬP PTIT -->
+          <div class="bg-white rounded-2xl border border-red-100 p-5 sm:p-6 shadow-card surface-card">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-red-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                <span>Tài liệu học tập PTIT (PDF, DOCX, PPTX)</span>
+              </h3>
+              <span id="fileCountBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-700">
+                0 file
+              </span>
+            </div>
+
+            <div class="mb-3">
+              <label for="materialCategory" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                Nhóm tài liệu học tập
+              </label>
+              <select
+                id="materialCategory"
+                class="w-full px-3 py-2 rounded-xl border border-red-100 bg-red-50/40 text-xs sm:text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              >
+                <option value="Slide bài giảng" selected>Slide bài giảng môn học</option>
+                <option value="Giáo trình &amp; Đề cương môn học">Giáo trình &amp; Đề cương môn học</option>
+                <option value="Tiểu luận / Báo cáo / Đồ án / Luận văn">Tiểu luận / Báo cáo / Đồ án / Luận văn</option>
+                <option value="Tài liệu GDQP&amp;AN">Tài liệu GDQP&amp;AN</option>
+                <option value="Đề thi &amp; Bài tập thực hành">Đề thi &amp; Bài tập thực hành</option>
+              </select>
+            </div>
+
+            <div
+              id="dropZone"
+              tabindex="0"
+              role="button"
+              aria-label="Kéo thả file hoặc nhấn để chọn tài liệu PDF, DOCX, PPTX"
+              class="border-2 border-dashed border-red-200 rounded-2xl p-6 text-center cursor-pointer hover:border-red-500 hover:bg-red-50/50 transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+            >
+              <input
+                type="file"
+                id="fileInput"
+                multiple
+                accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                class="hidden"
+              />
+              <div class="w-12 h-12 mx-auto rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-gray-900">
+                Kéo thả file vào đây hoặc <span class="text-red-600 underline">chọn từ thiết bị</span>
+              </p>
+              <p class="text-xs text-gray-500 mt-1">
+                Hỗ trợ nhiều file PDF, DOCX, PPTX • Tối đa 50MB/file
+              </p>
+            </div>
+
+            <div id="fileListContainer" class="mt-4 space-y-3"></div>
+
+            <div id="emptyFileHint" class="mt-4 p-3.5 rounded-xl bg-red-50/80 border border-red-200 text-xs text-red-900 flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>
+                Chưa có file nào được chọn. Bạn có thể bấm <strong>"Nạp tài liệu mẫu PTIT"</strong> ở phía trên hoặc tải slide, đề cương, báo cáo lên và nhập/sửa số trang trực tiếp.
+              </span>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-red-100 flex items-center justify-between text-sm">
+              <span class="font-medium text-gray-700">Tổng số trang tài liệu:</span>
+              <span id="totalPagesDisplay" class="font-extrabold text-lg text-red-600">0 trang</span>
+            </div>
+          </div>
+
+          <!-- KHỐI 3: THÔNG TIN SINH VIÊN PTIT -->
+          <div class="bg-white rounded-2xl border border-red-100 p-5 sm:p-6 shadow-card surface-card space-y-4">
+            <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-red-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+              <span>Thông tin sinh viên PTIT</span>
+            </h3>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="studentName" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Họ và tên sinh viên <span class="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="studentName"
+                  required
+                  placeholder="Ví dụ: Nguyễn Minh Đức"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                />
+              </div>
+
+              <div>
+                <label for="studentId" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Mã sinh viên PTIT <span class="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="studentId"
+                  required
+                  placeholder="Ví dụ: B24DCCN128 / B25DCKT045"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="studentPhone" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                  SĐT liên hệ <span class="text-red-600">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="studentPhone"
+                  required
+                  placeholder="Ví dụ: 0987654321"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                />
+              </div>
+
+              <div>
+                <label for="studentClass" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Lớp / Khóa ngành (tùy chọn)
+                </label>
+                <input
+                  type="text"
+                  id="studentClass"
+                  placeholder="Ví dụ: D24CQCN01-B, D25KT02-B"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label for="paymentMethod" class="block text-xs font-semibold text-gray-700 mb-1.5">
+                Hình thức thanh toán dự kiến
+              </label>
+              <select
+                id="paymentMethod"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              >
+                <option value="Thanh toán khi nhận tại quầy">Thanh toán khi nhận tại điểm PTIT (Tiền mặt / QR)</option>
+                <option value="Chuyển khoản xác nhận trước">Chuyển khoản xác nhận trước (Ưu tiên in sớm)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- CỘT PHẢI: CẤU HÌNH THÔNG SỐ IN & BOX TẠM TÍNH CHI PHÍ -->
+        <div class="lg:col-span-5 space-y-6 lg:sticky lg:top-20 min-w-0">
+          <div class="bg-white rounded-2xl border border-red-100 p-5 sm:p-6 shadow-card surface-card space-y-5">
+            <div class="flex items-center justify-between border-b border-red-100 pb-4">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-red-600 text-white text-xs flex items-center justify-center font-bold">4</span>
+                <span>Cấu hình thông số in</span>
+              </h3>
+              <button
+                type="button"
+                id="resetConfigBtn"
+                class="text-xs font-semibold text-gray-600 hover:text-red-600 underline"
+              >
+                Đặt lại mặc định
+              </button>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2.5">Loại mực in</label>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="relative flex items-center justify-between p-3.5 rounded-xl border-2 border-red-600 bg-red-50/50 cursor-pointer transition-all color-option-card">
+                  <div class="flex items-center gap-2.5">
+                    <input type="radio" name="printColor" value="bw" checked class="w-4 h-4 text-red-600 focus:ring-red-600" />
+                    <div>
+                      <p class="text-sm font-bold text-gray-900">In đen trắng</p>
+                      <p class="text-xs text-gray-600">Tiết kiệm, sắc nét</p>
+                    </div>
+                  </div>
+                  <span class="text-xs font-bold text-red-700 bg-white px-2 py-0.5 rounded-md border border-red-200">Chuẩn</span>
+                </label>
+
+                <label class="relative flex items-center justify-between p-3.5 rounded-xl border-2 border-gray-200 hover:border-red-300 bg-white cursor-pointer transition-all color-option-card">
+                  <div class="flex items-center gap-2.5">
+                    <input type="radio" name="printColor" value="color" class="w-4 h-4 text-red-600 focus:ring-red-600" />
+                    <div>
+                      <p class="text-sm font-bold text-gray-900">In màu</p>
+                      <p class="text-xs text-gray-600">Slide, biểu đồ màu</p>
+                    </div>
+                  </div>
+                  <span class="text-xs font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded-md">Màu nét</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="paperSize" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2">
+                  Khổ giấy
+                </label>
+                <select
+                  id="paperSize"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                >
+                  <option value="A4" selected>Khổ A4 (210×297mm)</option>
+                  <option value="A5">Khổ A5 (148×210mm)</option>
+                  <option value="A3">Khổ A3 (297×420mm)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2">
+                  Kiểu in mặt
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border border-gray-200 hover:border-red-400 cursor-pointer text-sm font-medium bg-white side-option-card">
+                    <input type="radio" name="printSides" value="1" class="w-4 h-4 text-red-600 focus:ring-red-600" />
+                    <span>1 mặt</span>
+                  </label>
+                  <label class="flex items-center justify-center gap-1.5 p-2.5 rounded-xl border-2 border-red-600 bg-red-50/70 cursor-pointer text-sm font-bold text-red-800 side-option-card">
+                    <input type="radio" name="printSides" value="2" checked class="w-4 h-4 text-red-600 focus:ring-red-600" />
+                    <span>2 mặt</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="bindingType" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2">
+                  Đóng quyển / hoàn thiện
+                </label>
+                <select
+                  id="bindingType"
+                  class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                >
+                  <option value="none" selected>Không đóng gáy (0đ)</option>
+                  <option value="staple">Bấm ghim góc (+1.500đ/bộ)</option>
+                  <option value="cover_bind">In bìa, đóng quyển (+3.000đ/bộ)</option>
+                  <option value="spiral">Đóng gáy lò xo nhựa (+8.000đ/bộ)</option>
+                  <option value="mica_spiral">Bìa mica + gáy xoắn (+12.000đ/bộ)</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="copiesCount" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2">
+                  Số lượng bản sao (bộ)
+                </label>
+                <div class="flex items-center rounded-xl border border-gray-300 bg-white overflow-hidden">
+                  <button
+                    type="button"
+                    id="decreaseCopiesBtn"
+                    aria-label="Giảm số lượng bản sao"
+                    class="px-3.5 py-2.5 text-gray-700 hover:bg-red-50 hover:text-red-700 font-bold text-base transition-colors"
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    id="copiesCount"
+                    min="1"
+                    max="100"
+                    value="1"
+                    class="w-full text-center text-sm font-bold text-gray-900 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    id="increaseCopiesBtn"
+                    aria-label="Tăng số lượng bản sao"
+                    class="px-3.5 py-2.5 text-gray-700 hover:bg-red-50 hover:text-red-700 font-bold text-base transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="printNote" class="block text-xs font-bold uppercase tracking-wide text-gray-700 mb-2">
+                Ghi chú thêm cho quầy in PTIT
+              </label>
+              <textarea
+                id="printNote"
+                rows="2"
+                placeholder="Ví dụ: Giao tại Tòa A2 Tầng 6 trước tiết 1, in slide 2 trang/mặt..."
+                class="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- BOX "TẠM TÍNH CHI PHÍ" -->
+          <div class="bg-gradient-to-br from-red-700 via-red-600 to-red-800 text-white rounded-2xl p-5 sm:p-6 shadow-xl border border-red-500">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b border-white/20">
+              <div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-red-100">Ước tính minh bạch</span>
+                <h3 class="text-lg sm:text-xl font-extrabold text-white">Tạm tính chi phí</h3>
+              </div>
+              <span id="costSummaryPill" class="px-3 py-1 rounded-full text-xs font-semibold bg-white/15 text-white">
+                0 trang × 1 bộ
+              </span>
+            </div>
+
+            <div class="py-4 space-y-2.5 text-sm border-b border-white/20">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-white font-medium">1. Tiền giấy &amp; mực in</p>
+                  <p id="formulaPrintDetail" class="text-xs text-red-100 mt-0.5">
+                    0 trang × 1 bộ × 300đ/trang (In 2 mặt A4 Đen trắng)
+                  </p>
+                </div>
+                <span id="printCostValue" class="font-bold text-white whitespace-nowrap">0đ</span>
+              </div>
+
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-white font-medium">2. Phí đóng quyển / hoàn thiện</p>
+                  <p id="formulaBindingDetail" class="text-xs text-red-100 mt-0.5">
+                    Không đóng gáy × 1 bộ
+                  </p>
+                </div>
+                <span id="bindingCostValue" class="font-bold text-white whitespace-nowrap">0đ</span>
+              </div>
+
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-white font-medium">3. Giao nhận nội bộ PTIT</p>
+                  <p id="costPickupDetail" class="text-xs text-red-100 mt-0.5">
+                    Cơ sở Trần Phú (Hà Đông) • Tòa A1 • Tầng 1
+                  </p>
+                </div>
+                <span class="font-bold text-white bg-white/15 px-2.5 py-0.5 rounded-md text-xs whitespace-nowrap">Miễn phí (0đ)</span>
+              </div>
+            </div>
+
+            <div class="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-red-100 font-semibold">Tổng tiền dự kiến</p>
+                <p id="totalCostValue" class="text-2xl sm:text-3xl font-extrabold text-white mt-0.5">0đ</p>
+              </div>
+
+              <button
+                type="submit"
+                id="submitOrderBtn"
+                class="w-full sm:w-auto px-6 py-3.5 rounded-xl font-bold text-sm sm:text-base text-red-700 bg-white hover:bg-red-50 active:scale-[0.99] shadow-lg shadow-red-950/20 transition-all flex items-center justify-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>Gửi đơn đặt in ngay</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- 4. PHẦN "TRA CỨU & QUẢN LÝ ĐƠN ĐẶT IN" -->
+    <section id="tra-cuu" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 border-t border-red-100">
+      <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-red-600">Theo dõi tiến độ</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-gray-900 mt-1">Tra cứu &amp; quản lý đơn đặt in PTIT</h2>
+          <p class="text-sm text-gray-600 mt-1">
+            Mọi người có thể xem danh sách đơn. Nhập số điện thoại để mở đầy đủ thông tin đơn của mình; quản trị viên đăng nhập để xem toàn bộ dữ liệu.
+          </p>
+        </div>
+
+        <div class="w-full bg-white rounded-2xl border border-red-100 p-4 mb-2 shadow-card surface-card space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p class="text-sm font-bold text-gray-900">Kết nối dữ liệu PTIT Print</p>
+              <p id="cloudStatusText" class="text-xs text-gray-600">Đang kiểm tra cấu hình lưu trữ...</p>
+            </div>
+            <span id="cloudStatusBadge" class="inline-flex w-fit px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">Chưa cấu hình</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2" id="adminLoginPanel">
+            <input id="adminEmail" type="email" autocomplete="username" placeholder="Email quản trị" class="px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <input id="adminPassword" type="password" autocomplete="current-password" placeholder="Mật khẩu quản trị" class="px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <div class="flex gap-2">
+              <button id="adminLoginBtn" type="button" class="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700">Đăng nhập quản trị</button>
+              <button id="adminLogoutBtn" type="button" class="hidden px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50">Đăng xuất</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 border-t border-red-50 pt-3">
+            <input id="trackOrderPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Nhập SĐT của bạn để xem đầy đủ đơn của mình (không bắt buộc)" class="px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-600" />
+            <button id="trackOrderBtn" type="button" class="px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-black">Làm mới danh sách</button>
+          </div>
+          <p class="text-[11px] text-gray-500">Tất cả đơn hàng đều được hiển thị. Nhập số điện thoại của bạn để xem đầy đủ thông tin đơn của mình; thông tin riêng tư của khách khác sẽ được ẩn.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2" id="statusFilterGroup">
+          <button type="button" data-status="ALL" class="status-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-red-600 text-white transition-all">
+            Tất cả
+          </button>
+          <button type="button" data-status="Chờ in" class="status-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-red-200 hover:border-red-400 hover:text-red-700 transition-all">
+            Chờ in
+          </button>
+          <button type="button" data-status="Đang in" class="status-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-red-200 hover:border-red-400 hover:text-red-700 transition-all">
+            Đang in
+          </button>
+          <button type="button" data-status="Sẵn sàng nhận tại trường" class="status-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-red-200 hover:border-red-400 hover:text-red-700 transition-all">
+            Sẵn sàng nhận tại trường
+          </button>
+          <button type="button" data-status="Đã nhận" class="status-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-red-200 hover:border-red-400 hover:text-red-700 transition-all">
+            Đã nhận
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-red-100 p-4 mb-6 shadow-card surface-card space-y-3">
+        <div class="relative">
+          <svg class="w-5 h-5 text-red-400 absolute left-3.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            id="searchOrderInput"
+            placeholder="Tìm theo mã đơn, tên sinh viên, lớp hoặc điểm nhận..."
+            class="w-full pl-11 pr-10 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
+          />
+          <button
+            type="button"
+            id="clearSearchBtn"
+            title="Xóa từ khóa tìm kiếm"
+            class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500 hover:text-red-600"
+          >
+            Xóa
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+          <span class="font-semibold text-gray-600">Lọc nhanh theo cơ sở PTIT:</span>
+          <button type="button" data-campus="ALL" class="campus-filter-btn px-3 py-1.5 rounded-lg font-bold bg-red-600 text-white transition-colors">
+            Tất cả cơ sở
+          </button>
+          <button type="button" data-campus="tran_phu" class="campus-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-red-50 text-red-800 border border-red-200 hover:bg-red-100 transition-colors">
+            Cơ sở Trần Phú (Hà Đông)
+          </button>
+          <button type="button" data-campus="ngoc_truc" class="campus-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-red-50 text-red-800 border border-red-200 hover:bg-red-100 transition-colors">
+            Cơ sở Ngọc Trục
+          </button>
+        </div>
+      </div>
+
+      <div id="ordersListContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+    </section>
+
+    <!-- 5. BẢNG GIÁ THAM KHẢO & CÂU HỎI THƯỜNG GẶP -->
+    <section id="bang-gia" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14 border-t border-red-100">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div class="lg:col-span-7 bg-white rounded-2xl border border-red-100 p-6 shadow-card surface-card">
+          <span class="text-xs font-bold uppercase tracking-wider text-red-600">Minh bạch chi phí</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1 mb-4">Bảng giá tham khảo cho sinh viên PTIT (Khổ A4 chuẩn)</h2>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="border-b border-red-200 text-xs uppercase text-red-800 bg-red-50">
+                  <th class="py-3 px-3.5 rounded-tl-xl font-bold">Hình thức in</th>
+                  <th class="py-3 px-3.5 font-bold">In 2 mặt (Khuyên dùng)</th>
+                  <th class="py-3 px-3.5 rounded-tr-xl font-bold">In 1 mặt</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-red-100">
+                <tr>
+                  <td class="py-3.5 px-3.5 font-semibold text-gray-900">In đen trắng A4</td>
+                  <td class="py-3.5 px-3.5 font-bold text-red-600">300đ / trang</td>
+                  <td class="py-3.5 px-3.5 font-semibold text-gray-800">450đ / trang</td>
+                </tr>
+                <tr>
+                  <td class="py-3.5 px-3.5 font-semibold text-gray-900">In màu tài liệu / slide A4</td>
+                  <td class="py-3.5 px-3.5 font-bold text-red-700">1.500đ / trang</td>
+                  <td class="py-3.5 px-3.5 font-semibold text-gray-800">2.000đ / trang</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-5 pt-4 border-t border-red-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700">
+            <div class="p-3 rounded-xl bg-red-50/60 border border-red-100">
+              <p class="font-bold text-gray-900 mb-1">Hệ số khổ giấy</p>
+              <p>• Khổ A5: <strong class="text-red-700">0.75x</strong> giá A4</p>
+              <p>• Khổ A3: <strong class="text-red-700">2.0x</strong> giá A4</p>
+            </div>
+            <div class="p-3 rounded-xl bg-red-50/60 border border-red-100">
+              <p class="font-bold text-gray-900 mb-1">Phí đóng quyển / hoàn thiện</p>
+              <p>• Bấm ghim góc: <strong class="text-red-700">1.500đ / bộ</strong></p>
+              <p>• In bìa, đóng quyển: <strong class="text-red-700">3.000đ / bộ</strong></p>
+              <p>• Gáy lò xo nhựa: <strong class="text-red-700">8.000đ / bộ</strong></p>
+              <p>• Bìa mica + gáy xoắn: <strong class="text-red-700">12.000đ / bộ</strong></p>
+            </div>
+          </div>
+        </div>
+
+        <div id="faq" class="lg:col-span-5 bg-white rounded-2xl border border-red-100 p-6 shadow-card surface-card space-y-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-red-600">Giải đáp nhanh</span>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-gray-900 mt-1">Câu hỏi thường gặp tại PTIT</h2>
+          </div>
+
+          <div class="space-y-3">
+            <details open class="group rounded-xl border border-red-100 bg-red-50/40 p-3.5">
+              <summary class="font-bold text-sm text-gray-900 cursor-pointer list-none flex items-center justify-between gap-2">
+                <span>Nhận tài liệu ở những cơ sở, tòa nhà và tầng nào của PTIT?</span>
+                <span class="text-red-600 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <p class="text-xs sm:text-sm text-gray-700 mt-2 leading-relaxed">
+                Bạn có thể chọn <strong>Cơ sở Trần Phú (Hà Đông)</strong> với chi tiết <strong>Tòa A1 (Tầng 1–5)</strong>, <strong>Tòa A2 (Tầng 1–12)</strong>, <strong>Tòa A3 (Tầng 1–5)</strong> hoặc chọn <strong>Cơ sở Ngọc Trục</strong> theo đúng khung giờ ca học.
+              </p>
+            </details>
+
+            <details class="group rounded-xl border border-red-100 bg-red-50/40 p-3.5">
+              <summary class="font-bold text-sm text-gray-900 cursor-pointer list-none flex items-center justify-between gap-2">
+                <span>Slide bài giảng, tiểu luận, đồ án và tài liệu GDQP&amp;AN có được bảo mật không?</span>
+                <span class="text-red-600 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <p class="text-xs sm:text-sm text-gray-700 mt-2 leading-relaxed">
+                Có. Toàn bộ file học tập của sinh viên PTIT chỉ phục vụ in ấn theo đơn và tự động xóa khỏi hệ thống sau khi bàn giao tài liệu thành công.
+              </p>
+            </details>
+
+            <details class="group rounded-xl border border-red-100 bg-red-50/40 p-3.5">
+              <summary class="font-bold text-sm text-gray-900 cursor-pointer list-none flex items-center justify-between gap-2">
+                <span>Thanh toán và nhận đơn bằng mã sinh viên như thế nào?</span>
+                <span class="text-red-600 group-open:rotate-180 transition-transform">▾</span>
+              </summary>
+              <p class="text-xs sm:text-sm text-gray-700 mt-2 leading-relaxed">
+                Khi tới điểm nhận tại trường, bạn chỉ cần đọc mã đơn hoặc mã sinh viên PTIT (VD: B24DCCN...) và thanh toán tiền mặt / quét mã QR hoặc đối chiếu chuyển khoản trước.
+              </p>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="bg-red-700 text-white py-8 border-t border-red-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs sm:text-sm">
+      <div class="flex items-center gap-2">
+        <span class="font-extrabold text-white">PTIT Print</span>
+        <span class="text-red-200">•</span>
+        <span class="text-red-50">Hệ thống Đặt In &amp; Nhận Tài Liệu Nội Bộ Sinh Viên PTIT</span>
+      </div>
+      <div class="text-red-100">
+        Cơ sở Trần Phú (Hà Đông: Tòa A1, A2, A3) • Cơ sở Ngọc Trục
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL XEM CHI TIẾT ĐƠN ĐẶT IN -->
+  <div id="orderDetailModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-gray-950/60 backdrop-blur-xs p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-200 animate-fade-in-up space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-red-100 pb-3">
+        <div>
+          <span class="text-xs font-bold uppercase text-red-600">Chi tiết đơn đặt in</span>
+          <h3 id="modalOrderCode" class="text-xl font-extrabold text-gray-900">PTIT-2026-xxx</h3>
+        </div>
+        <button type="button" id="closeModalBtn" class="p-2 rounded-lg text-gray-500 hover:text-red-700 hover:bg-red-50" aria-label="Đóng cửa sổ chi tiết">
+          ✕
+        </button>
+      </div>
+
+      <div id="modalOrderBody" class="space-y-3 text-sm text-gray-800"></div>
+
+      <div class="pt-3 border-t border-red-100 flex justify-end">
+        <button type="button" id="closeModalFooterBtn" class="px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const PRICING = {
+        baseRate: {
+          bw: { twoSided: 300, oneSided: 450 },
+          color: { twoSided: 1500, oneSided: 2000 }
+        },
+        paperMultiplier: {
+          A4: 1.0,
+          A5: 0.75,
+          A3: 2.0
+        },
+        bindingFee: {
+          none: { label: 'Không đóng gáy', fee: 0 },
+          staple: { label: 'Bấm ghim góc', fee: 1500 },
+          cover_bind: { label: 'In bìa, đóng quyển', fee: 3000 },
+          spiral: { label: 'Đóng gáy lò xo nhựa', fee: 8000 },
+          mica_spiral: { label: 'Bìa mica + gáy xoắn', fee: 12000 }
+        }
+      };
+
+      const STORAGE_KEYS = {
+        orders: 'ptit_print_orders_v1',
+        selfOrders: 'ptit_print_self_order_codes_v1',
+        sequence: 'ptit_print_order_sequence_v1'
+      };
+
+      // Điền hai giá trị này sau khi tạo project Supabase. Chỉ dùng anon/publishable key.
+      const SUPABASE_CONFIG = {
+        url: 'https://bnobqidjsfgftkqrazdp.supabase.co',
+        anonKey: 'sb_publishable_Janz5ge5z19ZHhyWVUensQ__GaEm-cT'
+      };
+      let supabaseClient = null;
+      let cloudEnabled = false;
+      let adminSignedIn = false;
+      let trackedPhone = '';
+      let orderRealtimeChannel = null;
+
+      let uploadedFiles = [];
+      let orderSequence = 105;
+      const selfCreatedOrderCodes = new Set();
+
+      const TRAN_PHU_BUILDINGS = {
+        A1: { label: 'Tòa A1', hasGroundFloor: false, maxFloor: 5 },
+        A2: { label: 'Tòa A2', hasGroundFloor: true, maxFloor: 12 },
+        A3: { label: 'Tòa A3', hasGroundFloor: false, maxFloor: 5 }
+      };
+
+      let orders = [
+        {
+          code: 'PTIT-2026-102',
+          studentName: 'Trần Gia Huy',
+          studentId: 'B24DCCN104',
+          studentPhone: '0968124578',
+          studentClass: 'D24CQCN01-B',
+          materialCategory: 'Giáo trình & Đề cương môn học',
+          files: [{ name: 'De_cuong_Kinh_te_chinh_tri_Mac_Lenin_PTIT.pdf', sizeLabel: '2.4 MB', pages: 48 }],
+          totalPages: 48,
+          printColor: 'bw',
+          paperSize: 'A4',
+          printSides: '2',
+          bindingType: 'spiral',
+          copiesCount: 1,
+          campusKey: 'tran_phu',
+          pickupLocation: 'Cơ sở Trần Phú (Hà Đông) • Tòa A1 • Tầng 3',
+          pickupSlot: '08:00 • Ngày 20/11/2026',
+          paymentMethod: 'Thanh toán khi nhận tại quầy',
+          note: 'Đóng gáy xoắn trước tiết 1 tại Tòa A1 Tầng 3',
+          estimatedCost: 22400,
+          status: 'Sẵn sàng nhận tại trường',
+          createdAt: '07:45 hôm nay'
+        },
+        {
+          code: 'PTIT-2026-103',
+          studentName: 'Lê Thảo Vy',
+          studentId: 'B25DCKT082',
+          studentPhone: '0915482930',
+          studentClass: 'D25KT02-B',
+          materialCategory: 'Slide bài giảng',
+          files: [
+            { name: 'Slide_Kinh_te_luong_va_EViews_PTIT.pptx', sizeLabel: '5.1 MB', pages: 24 },
+            { name: 'Bai_tap_thuc_hanh_EViews.docx', sizeLabel: '820 KB', pages: 8 }
+          ],
+          totalPages: 32,
+          printColor: 'color',
+          paperSize: 'A4',
+          printSides: '2',
+          bindingType: 'staple',
+          copiesCount: 2,
+          campusKey: 'tran_phu',
+          pickupLocation: 'Cơ sở Trần Phú (Hà Đông) • Tòa A2 • Tầng 8',
+          pickupSlot: '10:15 • Ngày 20/11/2026',
+          paymentMethod: 'Chuyển khoản xác nhận trước',
+          note: 'Bấm ghim góc riêng từng bộ cho nhóm học tại Tòa A2 Tầng 8',
+          estimatedCost: 100000,
+          status: 'Đang in',
+          createdAt: '09:30 hôm nay'
+        },
+        {
+          code: 'PTIT-2026-104',
+          studentName: 'Phạm Hoàng Nam',
+          studentId: 'B24DCAT156',
+          studentPhone: '0973901642',
+          studentClass: 'D24CQAT02-B',
+          materialCategory: 'Tiểu luận / Báo cáo / Đồ án / Luận văn',
+          files: [{ name: 'Bao_cao_Quan_tri_hoc_Nhom_05_PTIT.pdf', sizeLabel: '6.8 MB', pages: 90 }],
+          totalPages: 90,
+          printColor: 'bw',
+          paperSize: 'A4',
+          printSides: '2',
+          bindingType: 'mica_spiral',
+          copiesCount: 1,
+          campusKey: 'ngoc_truc',
+          pickupLocation: 'Cơ sở Ngọc Trục • Quầy nhận tài liệu Tầng 1',
+          pickupSlot: '13:30 • Ngày 20/11/2026',
+          paymentMethod: 'Thanh toán khi nhận tại quầy',
+          note: 'Bìa mica trong + gáy xoắn nộp báo cáo môn tại Cơ sở Ngọc Trục',
+          estimatedCost: 39000,
+          status: 'Chờ in',
+          createdAt: '11:10 hôm nay'
+        }
+      ];
+
+      let activeStatusFilter = 'ALL';
+      let activeCampusFilter = 'ALL';
+      let searchQuery = '';
+
+      function readStorageSafe(key) {
+        try {
+          if (typeof window === 'undefined' || !window.localStorage) return null;
+          return window.localStorage.getItem(key);
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function writeStorageSafe(key, value) {
+        try {
+          if (typeof window === 'undefined' || !window.localStorage) return;
+          window.localStorage.setItem(key, value);
+        } catch (err) {
+          // Bỏ qua an toàn khi bộ nhớ trình duyệt bị chặn
+        }
+      }
+
+      function syncOrderSequenceFromOrders() {
+        let maxSeq = orderSequence;
+        orders.forEach((ord) => {
+          const match = String(ord.code || '').match(/(\d+)$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num >= maxSeq) {
+              maxSeq = num + 1;
+            }
+          }
+        });
+        orderSequence = maxSeq;
+      }
+
+      function loadPersistedOrdersState() {
+        const rawOrders = readStorageSafe(STORAGE_KEYS.orders);
+        if (rawOrders) {
+          try {
+            const parsedOrders = JSON.parse(rawOrders);
+            if (Array.isArray(parsedOrders) && parsedOrders.length > 0) {
+              orders = parsedOrders;
+            }
+          } catch (err) {
+            // Giữ dữ liệu mẫu nếu dữ liệu lưu hỏng
+          }
+        }
+
+        const rawSelfCodes = readStorageSafe(STORAGE_KEYS.selfOrders);
+        if (rawSelfCodes) {
+          try {
+            const parsedCodes = JSON.parse(rawSelfCodes);
+            if (Array.isArray(parsedCodes)) {
+              selfCreatedOrderCodes.clear();
+              parsedCodes.forEach((code) => {
+                if (typeof code === 'string' && code.trim()) {
+                  selfCreatedOrderCodes.add(code.trim());
+                }
+              });
+            }
+          } catch (err) {
+            // Bỏ qua nếu lỗi định dạng
+          }
+        }
+
+        const rawSeq = readStorageSafe(STORAGE_KEYS.sequence);
+        if (rawSeq) {
+          const parsedSeq = parseInt(rawSeq, 10);
+          if (!isNaN(parsedSeq) && parsedSeq >= 105) {
+            orderSequence = parsedSeq;
+          }
+        }
+
+        syncOrderSequenceFromOrders();
+      }
+
+      function persistOrdersState() {
+        syncOrderSequenceFromOrders();
+        writeStorageSafe(STORAGE_KEYS.orders, JSON.stringify(orders));
+        writeStorageSafe(STORAGE_KEYS.selfOrders, JSON.stringify(Array.from(selfCreatedOrderCodes)));
+        writeStorageSafe(STORAGE_KEYS.sequence, String(orderSequence));
+      }
+
+      function setCloudStatus(message, connected) {
+        const textEl = document.getElementById('cloudStatusText');
+        const badge = document.getElementById('cloudStatusBadge');
+        if (textEl) textEl.textContent = message;
+        if (badge) {
+          badge.textContent = connected ? (adminSignedIn ? 'Quản trị đã kết nối' : 'Đám mây đã kết nối') : 'Chưa kết nối';
+          badge.className = connected
+            ? 'inline-flex w-fit px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200'
+            : 'inline-flex w-fit px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200';
+        }
+      }
+
+      function updateAdminPanel() {
+        const loginBtn = document.getElementById('adminLoginBtn');
+        const logoutBtn = document.getElementById('adminLogoutBtn');
+        const email = document.getElementById('adminEmail');
+        const password = document.getElementById('adminPassword');
+        if (loginBtn) loginBtn.classList.toggle('hidden', adminSignedIn);
+        if (logoutBtn) logoutBtn.classList.toggle('hidden', !adminSignedIn);
+        if (email) email.classList.toggle('hidden', adminSignedIn);
+        if (password) password.classList.toggle('hidden', adminSignedIn);
+      }
+
+      async function loadCloudAdminOrders() {
+        if (!supabaseClient || !adminSignedIn) return;
+        const { data, error } = await supabaseClient
+          .from('ptit_orders')
+          .select('code, order_data, status, created_at')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        orders = (data || []).map((row) => ({ ...row.order_data, code: row.code, status: row.status }));
+        syncOrderSequenceFromOrders();
+        renderOrdersList();
+      }
+
+      function subscribeAdminOrders() {
+        if (!supabaseClient || !adminSignedIn) return;
+        if (orderRealtimeChannel) supabaseClient.removeChannel(orderRealtimeChannel);
+        orderRealtimeChannel = supabaseClient
+          .channel('ptit-orders-live-sync')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'ptit_orders' }, async () => {
+            try { await loadCloudAdminOrders(); }
+            catch (err) { console.error('PTIT Print realtime sync:', err); }
+          })
+          .subscribe();
+      }
+
+      async function initCloudStorage() {
+        const configured = SUPABASE_CONFIG.url.startsWith('https://') &&
+          !SUPABASE_CONFIG.url.includes('YOUR_') &&
+          SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes('YOUR_');
+        if (!configured || !window.supabase?.createClient) {
+          cloudEnabled = false;
+          setCloudStatus('Chưa cấu hình Supabase. Website đang ở chế độ trình diễn trên trình duyệt này; dữ liệu chưa đồng bộ giữa thiết bị.', false);
+          loadPersistedOrdersState();
+          return;
+        }
+        supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+        cloudEnabled = true;
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          const { data: adminRow, error: adminError } = await supabaseClient
+            .from('ptit_admin_users').select('user_id').eq('user_id', session.user.id).maybeSingle();
+          adminSignedIn = !adminError && Boolean(adminRow);
+        }
+        updateAdminPanel();
+        if (adminSignedIn) {
+          await loadCloudAdminOrders();
+          subscribeAdminOrders();
+          setCloudStatus('Đã kết nối Supabase. Đang hiển thị dữ liệu đơn hàng dùng chung.', true);
+        } else {
+          await loadCloudPublicOrders();
+          setCloudStatus('Đã kết nối Supabase. Danh sách đơn được hiển thị với thông tin cá nhân đã bảo vệ.', true);
+        }
+        supabaseClient.auth.onAuthStateChange(async (_event, sessionNow) => {
+          adminSignedIn = false;
+          if (sessionNow?.user) {
+            const { data: row } = await supabaseClient.from('ptit_admin_users').select('user_id').eq('user_id', sessionNow.user.id).maybeSingle();
+            adminSignedIn = Boolean(row);
+          }
+          updateAdminPanel();
+          if (adminSignedIn) {
+            try { await loadCloudAdminOrders(); subscribeAdminOrders(); setCloudStatus('Đã đăng nhập quản trị. Dữ liệu đơn hàng đã đồng bộ.', true); }
+            catch (err) { showToast('Không tải được danh sách đơn: ' + err.message, 'warning'); }
+          } else {
+            if (orderRealtimeChannel) { supabaseClient.removeChannel(orderRealtimeChannel); orderRealtimeChannel = null; }
+            try { await loadCloudPublicOrders(); }
+            catch (err) { showToast('Không tải được danh sách đơn: ' + err.message, 'warning'); }
+            setCloudStatus('Đã đăng xuất quản trị. Danh sách đơn hiển thị ở chế độ bảo vệ thông tin.', true);
+          }
+        });
+      }
+
+      async function loadCloudPublicOrders(phone = null) {
+        if (!supabaseClient || adminSignedIn) return;
+        const { data, error } = await supabaseClient.rpc('ptit_list_public_orders', { p_phone: phone || null });
+        if (error) throw error;
+        orders = Array.isArray(data) ? data : [];
+        selfCreatedOrderCodes.clear();
+        orders.forEach((order) => { if (order?.isOwnOrder && order?.code) selfCreatedOrderCodes.add(order.code); });
+        activeStatusFilter = 'ALL';
+        activeCampusFilter = 'ALL';
+        syncOrderSequenceFromOrders();
+        renderOrdersList();
+      }
+
+      async function submitCloudOrder(orderPayload) {
+        const { data, error } = await supabaseClient.rpc('ptit_create_order', { p_order: orderPayload });
+        if (error) throw error;
+        return data;
+      }
+
+      // Upload tài liệu thật lên bucket private ptit-order-files.
+      async function uploadOrderFiles(orderCode, phone) {
+        const filesWithContent = uploadedFiles.filter((item) => item.rawFile instanceof File);
+        if (filesWithContent.length !== uploadedFiles.length) {
+          throw new Error('Có tài liệu mẫu/thiếu nội dung file. Hãy chọn file thật từ thiết bị, không dùng tài liệu mẫu.');
+        }
+        const storedFiles = [];
+        for (const item of filesWithContent) {
+          const original = item.rawFile;
+          const safeName = original.name.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9._-]+/g, '_').slice(-100) || 'document';
+          const storagePath = `${orderCode}/${crypto.randomUUID()}_${safeName}`;
+          const { error: uploadError } = await supabaseClient.storage
+            .from('ptit-order-files')
+            .upload(storagePath, original, { contentType: original.type || 'application/octet-stream', upsert: false });
+          if (uploadError) throw uploadError;
+          storedFiles.push({
+            id: item.id, name: item.name, ext: item.ext, sizeLabel: item.sizeLabel,
+            pages: item.pages, storagePath, contentType: original.type || 'application/octet-stream'
+          });
+        }
+        const { error: attachError } = await supabaseClient.rpc('ptit_attach_order_files', {
+          p_code: orderCode, p_phone: phone, p_files: storedFiles
+        });
+        if (attachError) throw attachError;
+        return storedFiles;
+      }
+
+      async function downloadOrderFile(storagePath, fileName, button) {
+        if (!adminSignedIn || !supabaseClient) {
+          showToast('Chỉ quản trị viên mới được tải tài liệu gốc.', 'warning');
+          return;
+        }
+        const oldText = button?.textContent;
+        if (button) { button.disabled = true; button.textContent = 'Đang chuẩn bị...'; }
+        try {
+          const { data, error } = await supabaseClient.storage
+            .from('ptit-order-files').createSignedUrl(storagePath, 90);
+          if (error) throw error;
+          const a = document.createElement('a');
+          a.href = data.signedUrl;
+          a.download = fileName || 'tai-lieu';
+          a.rel = 'noopener';
+          document.body.appendChild(a); a.click(); a.remove();
+        } catch (err) {
+          showToast('Không tải được file: ' + (err.message || 'Lỗi Storage'), 'warning');
+        } finally {
+          if (button) { button.disabled = false; button.textContent = oldText || 'Tải file'; }
+        }
+      }
+
+      async function trackCloudOrder() {
+        if (!cloudEnabled || !supabaseClient) {
+          showToast('Website chưa được cấu hình Supabase. Hãy hoàn tất phần thiết lập trước.', 'warning');
+          return;
+        }
+        const phone = (document.getElementById('trackOrderPhone')?.value || '').replace(/[\s.-]/g, '');
+        if (phone && !/^(0|\+84)[0-9]{8,10}$/.test(phone)) {
+          showToast('Số điện thoại chưa hợp lệ. Hãy kiểm tra lại hoặc để trống để xem danh sách chung.', 'warning');
+          return;
+        }
+        try {
+          if (adminSignedIn) {
+            await loadCloudAdminOrders();
+          } else {
+            trackedPhone = phone;
+            await loadCloudPublicOrders(phone || null);
+          }
+          showToast(phone ? 'Đã làm mới danh sách. Đơn gắn với số điện thoại của bạn được hiển thị đầy đủ.' : 'Đã làm mới danh sách đơn hàng.', 'success');
+        } catch (err) {
+          showToast('Không tải được danh sách đơn: ' + (err.message || 'Lỗi kết nối'), 'warning');
+        }
+      }
+
+      async function cancelCloudOrder(code) {
+        const { data, error } = await supabaseClient.rpc('ptit_cancel_order', { p_code: code, p_phone: trackedPhone });
+        if (error || !data) throw (error || new Error('Không thể hủy đơn này.'));
+        const idx = orders.findIndex((o) => o.code === code);
+        if (idx >= 0) orders[idx] = data;
+        renderOrdersList();
+      }
+
+      function formatVND(amount) {
+        const rounded = Math.round(Number(amount) || 0);
+        return rounded.toLocaleString('vi-VN') + 'đ';
+      }
+
+      function formatFileSize(bytes) {
+        if (!bytes || bytes <= 0) return '1.2 MB';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      }
+
+      function estimatePagesFromFile(file) {
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const sizeKB = Math.max(10, (file.size || 50000) / 1024);
+        let est = Math.round(sizeKB / 45);
+        if (ext === 'pptx' || ext === 'ppt') est = Math.max(8, Math.round(sizeKB / 85));
+        return Math.min(500, Math.max(1, est));
+      }
+
+      function escapeHTML(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function maskLastThree(value) {
+        const clean = String(value || '').trim();
+        if (!clean) return '•••';
+        const lastThree = clean.slice(-3);
+        const hiddenLen = Math.max(3, Math.min(8, clean.length - 3));
+        return `${'•'.repeat(hiddenLen)}${lastThree}`;
+      }
+
+      function maskLastTwo(value) {
+        const clean = String(value || '').trim();
+        if (!clean) return '••';
+        return `${'•'.repeat(Math.max(2, clean.length - 2))}${clean.slice(-2)}`;
+      }
+
+      function isSelfOrder(order) {
+        return Boolean(order && (adminSignedIn || order.isOwnOrder === true || selfCreatedOrderCodes.has(order.code)));
+      }
+
+      function padTwo(num) {
+        return String(num).padStart(2, '0');
+      }
+
+      function toISODateString(dateObj) {
+        return `${dateObj.getFullYear()}-${padTwo(dateObj.getMonth() + 1)}-${padTwo(dateObj.getDate())}`;
+      }
+
+      function formatVNDateString(isoDateStr) {
+        if (!isoDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(isoDateStr)) return '';
+        const [y, m, d] = isoDateStr.split('-');
+        return `${d}/${m}/${y}`;
+      }
+
+      function populatePickupTimeSelectors() {
+        const hourSelect = document.getElementById('pickupHour');
+        const minuteSelect = document.getElementById('pickupMinute');
+        if (!hourSelect || !minuteSelect) return;
+
+        let hourHtml = '';
+        for (let h = 6; h <= 18; h++) {
+          hourHtml += `<option value="${padTwo(h)}">${padTwo(h)}h</option>`;
+        }
+        hourSelect.innerHTML = hourHtml;
+        rebuildMinuteOptionsForHour(hourSelect.value || '06', '30');
+      }
+
+      function rebuildMinuteOptionsForHour(hourStr, preferredMinuteStr = null) {
+        const minuteSelect = document.getElementById('pickupMinute');
+        if (!minuteSelect) return;
+
+        const hour = parseInt(hourStr, 10);
+        const minMinute = hour === 6 ? 30 : 0;
+        const maxMinute = hour === 18 ? 30 : 59;
+
+        const currentVal = preferredMinuteStr !== null ? parseInt(preferredMinuteStr, 10) : parseInt(minuteSelect.value || '0', 10);
+        let targetMinute = isNaN(currentVal) ? minMinute : currentVal;
+        if (targetMinute < minMinute) targetMinute = minMinute;
+        if (targetMinute > maxMinute) targetMinute = maxMinute;
+
+        let minuteHtml = '';
+        for (let m = minMinute; m <= maxMinute; m++) {
+          minuteHtml += `<option value="${padTwo(m)}" ${m === targetMinute ? 'selected' : ''}>${padTwo(m)}p</option>`;
+        }
+        minuteSelect.innerHTML = minuteHtml;
+      }
+
+      function initDefaultPickupDateTime() {
+        const dateInput = document.getElementById('pickupDate');
+        const hourSelect = document.getElementById('pickupHour');
+        if (!dateInput || !hourSelect) return;
+
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        let targetDate = new Date(now);
+        let targetHour = 12;
+        let targetMinute = 30;
+
+        if (currentMinutes > 18 * 60 + 30) {
+          targetDate.setDate(targetDate.getDate() + 1);
+          targetHour = 7;
+          targetMinute = 30;
+        } else if (currentMinutes < 6 * 60 + 30) {
+          targetHour = 6;
+          targetMinute = 30;
+        } else {
+          const rounded = Math.min(18 * 60 + 30, Math.ceil((currentMinutes + 15) / 15) * 15);
+          targetHour = Math.floor(rounded / 60);
+          targetMinute = rounded % 60;
+        }
+
+        const todayISO = toISODateString(now);
+        dateInput.min = todayISO;
+        dateInput.value = toISODateString(targetDate);
+        hourSelect.value = padTwo(targetHour);
+        rebuildMinuteOptionsForHour(padTwo(targetHour), padTwo(targetMinute));
+      }
+
+      function getFormattedPickupSchedule(showNotificationOnClamp = false) {
+        const dateInput = document.getElementById('pickupDate');
+        const hourSelect = document.getElementById('pickupHour');
+        const minuteSelect = document.getElementById('pickupMinute');
+        const helperEl = document.getElementById('pickupTimeHelper');
+
+        const rawDate = dateInput?.value || '';
+        const todayISO = toISODateString(new Date());
+        let validDate = rawDate;
+        if (!validDate || validDate < todayISO) {
+          validDate = todayISO;
+          if (dateInput && !rawDate) dateInput.value = validDate;
+        }
+
+        let hour = parseInt(hourSelect?.value || '6', 10);
+        if (isNaN(hour) || hour < 6) hour = 6;
+        if (hour > 18) hour = 18;
+
+        const minAllowed = hour === 6 ? 30 : 0;
+        const maxAllowed = hour === 18 ? 30 : 59;
+        let minute = parseInt(minuteSelect?.value || String(minAllowed), 10);
+        if (isNaN(minute) || minute < minAllowed) {
+          minute = minAllowed;
+        } else if (minute > maxAllowed) {
+          minute = maxAllowed;
+        }
+
+        const totalMins = hour * 60 + minute;
+        if (totalMins < 6 * 60 + 30) {
+          hour = 6;
+          minute = 30;
+          if (showNotificationOnClamp) {
+            showToast('Giờ nhận sớm nhất trong ngày là 06:30.', 'warning');
+          }
+        } else if (totalMins > 18 * 60 + 30) {
+          hour = 18;
+          minute = 30;
+          if (showNotificationOnClamp) {
+            showToast('Giờ nhận muộn nhất trong ngày là 18:30.', 'warning');
+          }
+        }
+
+        if (hourSelect) hourSelect.value = padTwo(hour);
+        rebuildMinuteOptionsForHour(padTwo(hour), padTwo(minute));
+
+        const formattedTime = `${padTwo(hour)}:${padTwo(minute)}`;
+        const formattedDate = formatVNDateString(validDate);
+        const combinedSchedule = `${formattedTime} • Ngày ${formattedDate}`;
+
+        if (helperEl) {
+          helperEl.innerHTML = `Nhận dự kiến: <strong class="text-red-700">${escapeHTML(combinedSchedule)}</strong> (Giới hạn 06:30 – 18:30).`;
+        }
+
+        return {
+          isoDate: validDate,
+          formattedDate,
+          formattedTime,
+          combinedSchedule
+        };
+      }
+
+      function showToast(message, type = 'info') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const styles = {
+          success: 'bg-red-700 text-white border-red-800',
+          warning: 'bg-red-50 text-red-900 border-red-300',
+          info: 'bg-white text-gray-900 border-red-200'
+        };
+
+        const toast = document.createElement('div');
+        toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-xl text-xs sm:text-sm font-medium flex items-center justify-between gap-3 animate-fade-in-up ${styles[type] || styles.info}`;
+        toast.innerHTML = `
+          <span>${escapeHTML(message)}</span>
+          <button type="button" class="opacity-75 hover:opacity-100 font-bold px-1" aria-label="Đóng thông báo">✕</button>
+        `;
+
+        toast.querySelector('button').addEventListener('click', () => toast.remove());
+        container.appendChild(toast);
+        setTimeout(() => {
+          if (toast.parentElement) toast.remove();
+        }, 4200);
+      }
+
+      function addFilesToList(fileList) {
+        if (!fileList || fileList.length === 0) return;
+
+        const allowedExt = ['pdf', 'doc', 'docx', 'ppt', 'pptx'];
+        let addedCount = 0;
+
+        Array.from(fileList).forEach((file) => {
+          const ext = (file.name.split('.').pop() || '').toLowerCase();
+          if (!allowedExt.includes(ext)) {
+            showToast(`File "${file.name}" chưa hỗ trợ. Vui lòng chọn PDF, DOCX hoặc PPTX.`, 'warning');
+            return;
+          }
+
+          uploadedFiles.push({
+            id: 'f_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            name: file.name,
+            ext: ext.toUpperCase(),
+            sizeLabel: formatFileSize(file.size),
+            pages: estimatePagesFromFile(file),
+            rawFile: file
+          });
+          addedCount++;
+        });
+
+        if (addedCount > 0) {
+          showToast(`Đã thêm ${addedCount} tài liệu vào danh sách in.`, 'success');
+          renderFileList();
+          updateCostEstimate();
+        }
+      }
+
+      function loadSampleFiles() {
+        const category = document.getElementById('materialCategory')?.value || 'Slide bài giảng';
+        uploadedFiles = [
+          {
+            id: 'sample_ptit_1',
+            name: 'Slide_Kinh_te_luong_va_EViews_PTIT.pdf',
+            ext: 'PDF',
+            sizeLabel: '3.2 MB',
+            pages: 28
+          },
+          {
+            id: 'sample_ptit_2',
+            name: 'Bao_cao_Quan_tri_hoc_PTIT.docx',
+            ext: 'DOCX',
+            sizeLabel: '1.1 MB',
+            pages: 14
+          }
+        ];
+        renderFileList();
+        updateCostEstimate();
+        showToast(`Đã nạp 2 tài liệu mẫu PTIT (${category}: 28 trang & 14 trang).`, 'info');
+      }
+
+      function renderFileList() {
+        const container = document.getElementById('fileListContainer');
+        const emptyHint = document.getElementById('emptyFileHint');
+        const badge = document.getElementById('fileCountBadge');
+
+        if (!container || !emptyHint || !badge) return;
+
+        badge.textContent = `${uploadedFiles.length} file`;
+
+        if (uploadedFiles.length === 0) {
+          container.innerHTML = '';
+          emptyHint.classList.remove('hidden');
+          return;
+        }
+
+        emptyHint.classList.add('hidden');
+        container.innerHTML = uploadedFiles
+          .map((file, idx) => {
+            const badgeColor =
+              file.ext === 'PDF'
+                ? 'bg-red-100 text-red-700'
+                : file.ext.includes('DOC')
+                ? 'bg-red-50 text-red-800 border border-red-200'
+                : 'bg-red-600 text-white';
+
+            return `
+              <div class="p-3.5 rounded-xl border border-red-100 bg-red-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up">
+                <div class="min-w-0 flex-1 flex items-start gap-3">
+                  <span class="px-2 py-1 rounded-lg text-[11px] font-extrabold shrink-0 ${badgeColor}">${escapeHTML(file.ext)}</span>
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-gray-900 truncate" title="${escapeHTML(file.name)}">${escapeHTML(file.name)}</p>
+                    <p class="text-xs text-gray-600">Tệp #${idx + 1} • Dung lượng: ${escapeHTML(file.sizeLabel)}</p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
+                  <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-800">
+                    <span>Số trang:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="2000"
+                      value="${file.pages}"
+                      data-file-id="${file.id}"
+                      class="file-pages-input w-20 px-2.5 py-1.5 rounded-lg border border-red-200 bg-white text-center text-sm font-bold text-red-700 focus:outline-none focus:ring-2 focus:ring-red-600"
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    data-remove-id="${file.id}"
+                    title="Xóa file này"
+                    class="remove-file-btn p-2 rounded-lg text-gray-400 hover:text-red-700 hover:bg-red-100/70 transition-colors"
+                    aria-label="Xóa file ${escapeHTML(file.name)}"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        container.querySelectorAll('.file-pages-input').forEach((input) => {
+          input.addEventListener('input', (e) => {
+            const fileId = e.target.getAttribute('data-file-id');
+            let val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 1) val = 1;
+            if (val > 2000) val = 2000;
+
+            const targetFile = uploadedFiles.find((f) => f.id === fileId);
+            if (targetFile) {
+              targetFile.pages = val;
+              updateCostEstimate();
+            }
+          });
+
+          input.addEventListener('blur', (e) => {
+            let val = parseInt(e.target.value, 10);
+            if (isNaN(val) || val < 1) val = 1;
+            e.target.value = val;
+          });
+        });
+
+        container.querySelectorAll('.remove-file-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const removeId = e.currentTarget.getAttribute('data-remove-id');
+            uploadedFiles = uploadedFiles.filter((f) => f.id !== removeId);
+            renderFileList();
+            updateCostEstimate();
+            showToast('Đã xóa tài liệu khỏi danh sách.', 'info');
+          });
+        });
+      }
+
+      function syncFloorOptionsForBuilding(buildingCode) {
+        const floorSelect = document.getElementById('tranPhuFloor');
+        if (!floorSelect) return;
+
+        const buildingInfo = TRAN_PHU_BUILDINGS[buildingCode] || TRAN_PHU_BUILDINGS.A1;
+        const availableFloors = [];
+        if (buildingInfo.hasGroundFloor) {
+          availableFloors.push('G');
+        }
+        for (let f = 1; f <= buildingInfo.maxFloor; f++) {
+          availableFloors.push(String(f));
+        }
+
+        const previousFloor = floorSelect.value || availableFloors[0];
+        const safeFloor = availableFloors.includes(previousFloor) ? previousFloor : availableFloors[0];
+
+        floorSelect.innerHTML = availableFloors
+          .map((floorVal) => `<option value="${floorVal}" ${floorVal === safeFloor ? 'selected' : ''}>Tầng ${floorVal}</option>`)
+          .join('');
+      }
+
+      function updatePickupHierarchyUI() {
+        const campusKey = document.querySelector('input[name="ptitCampus"]:checked')?.value || 'tran_phu';
+        const tranPhuBox = document.getElementById('tranPhuSubSelectors');
+        const ngocTrucBox = document.getElementById('ngocTrucSubSelector');
+
+        if (tranPhuBox && ngocTrucBox) {
+          if (campusKey === 'tran_phu') {
+            tranPhuBox.classList.remove('hidden');
+            ngocTrucBox.classList.add('hidden');
+          } else {
+            tranPhuBox.classList.add('hidden');
+            ngocTrucBox.classList.remove('hidden');
+          }
+        }
+
+        document.querySelectorAll('.campus-option-card').forEach((card) => {
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio && radio.checked) {
+            card.className =
+              'relative flex items-start gap-3 p-4 rounded-xl border-2 border-red-600 bg-red-50/50 cursor-pointer transition-all campus-option-card';
+          } else {
+            card.className =
+              'relative flex items-start gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-red-300 bg-white cursor-pointer transition-all campus-option-card';
+          }
+        });
+      }
+
+      function getSelectedPickupDetails() {
+        const campusKey = document.querySelector('input[name="ptitCampus"]:checked')?.value || 'tran_phu';
+
+        if (campusKey === 'ngoc_truc') {
+          const ngocTrucPoint =
+            document.getElementById('ngocTrucPoint')?.value || 'Quầy nhận tài liệu Tầng 1 - Cơ sở Ngọc Trục';
+          const shortPoint = ngocTrucPoint.replace(' - Cơ sở Ngọc Trục', '');
+          return {
+            campusKey: 'ngoc_truc',
+            pickupLocation: `Cơ sở Ngọc Trục • ${shortPoint}`
+          };
+        }
+
+        const buildingCode = document.getElementById('tranPhuBuilding')?.value || 'A1';
+        const buildingInfo = TRAN_PHU_BUILDINGS[buildingCode] || TRAN_PHU_BUILDINGS.A1;
+        const floorNum = document.getElementById('tranPhuFloor')?.value || '1';
+
+        return {
+          campusKey: 'tran_phu',
+          pickupLocation: `Cơ sở Trần Phú (Hà Đông) • ${buildingInfo.label} • Tầng ${floorNum}`
+        };
+      }
+
+      function getCurrentPrintConfig() {
+        const printColor = document.querySelector('input[name="printColor"]:checked')?.value || 'bw';
+        const paperSize = document.getElementById('paperSize')?.value || 'A4';
+        const printSides = document.querySelector('input[name="printSides"]:checked')?.value || '2';
+        const bindingType = document.getElementById('bindingType')?.value || 'none';
+        let copiesCount = parseInt(document.getElementById('copiesCount')?.value || '1', 10);
+        if (isNaN(copiesCount) || copiesCount < 1) copiesCount = 1;
+
+        const materialCategory = document.getElementById('materialCategory')?.value || 'Slide bài giảng';
+        const pickupDetails = getSelectedPickupDetails();
+        const scheduleInfo = getFormattedPickupSchedule(false);
+        const paymentMethod = document.getElementById('paymentMethod')?.value || 'Thanh toán khi nhận tại quầy';
+        const note = (document.getElementById('printNote')?.value || '').trim();
+        const totalPages = uploadedFiles.reduce((sum, f) => sum + (parseInt(f.pages, 10) || 0), 0);
+
+        return {
+          printColor,
+          paperSize,
+          printSides,
+          bindingType,
+          copiesCount,
+          materialCategory,
+          campusKey: pickupDetails.campusKey,
+          pickupLocation: pickupDetails.pickupLocation,
+          pickupSlot: scheduleInfo.combinedSchedule,
+          paymentMethod,
+          note,
+          totalPages
+        };
+      }
+
+      function calculateCostDetails(cfg) {
+        const base =
+          cfg.printColor === 'color'
+            ? cfg.printSides === '2'
+              ? PRICING.baseRate.color.twoSided
+              : PRICING.baseRate.color.oneSided
+            : cfg.printSides === '2'
+            ? PRICING.baseRate.bw.twoSided
+            : PRICING.baseRate.bw.oneSided;
+
+        const multiplier = PRICING.paperMultiplier[cfg.paperSize] || 1.0;
+        const unitPricePerPage = Math.round(base * multiplier);
+
+        const printCost = cfg.totalPages * cfg.copiesCount * unitPricePerPage;
+        const bindingMeta = PRICING.bindingFee[cfg.bindingType] || PRICING.bindingFee.none;
+        const bindingCost = bindingMeta.fee * cfg.copiesCount;
+        const totalCost = printCost + bindingCost;
+
+        return {
+          unitPricePerPage,
+          printCost,
+          bindingCost,
+          bindingLabel: bindingMeta.label,
+          bindingUnitFee: bindingMeta.fee,
+          totalCost
+        };
+      }
+
+      function updateCostEstimate() {
+        const cfg = getCurrentPrintConfig();
+        const calc = calculateCostDetails(cfg);
+
+        const totalPagesEl = document.getElementById('totalPagesDisplay');
+        if (totalPagesEl) {
+          totalPagesEl.textContent = `${cfg.totalPages.toLocaleString('vi-VN')} trang`;
+        }
+
+        const pillEl = document.getElementById('costSummaryPill');
+        if (pillEl) {
+          pillEl.textContent = `${cfg.totalPages} trang × ${cfg.copiesCount} bộ`;
+        }
+
+        const colorLabel = cfg.printColor === 'color' ? 'In màu' : 'In đen trắng';
+        const sideLabel = cfg.printSides === '2' ? 'In 2 mặt' : 'In 1 mặt';
+        const formulaPrintEl = document.getElementById('formulaPrintDetail');
+        if (formulaPrintEl) {
+          formulaPrintEl.textContent = `${cfg.totalPages} trang × ${cfg.copiesCount} bộ × ${formatVND(calc.unitPricePerPage)}/trang (${sideLabel} ${cfg.paperSize} ${colorLabel})`;
+        }
+
+        const printCostEl = document.getElementById('printCostValue');
+        if (printCostEl) {
+          printCostEl.textContent = formatVND(calc.printCost);
+        }
+
+        const formulaBindingEl = document.getElementById('formulaBindingDetail');
+        if (formulaBindingEl) {
+          formulaBindingEl.textContent = `${calc.bindingLabel} (${formatVND(calc.bindingUnitFee)}/bộ) × ${cfg.copiesCount} bộ`;
+        }
+
+        const bindingCostEl = document.getElementById('bindingCostValue');
+        if (bindingCostEl) {
+          bindingCostEl.textContent = formatVND(calc.bindingCost);
+        }
+
+        const totalCostEl = document.getElementById('totalCostValue');
+        if (totalCostEl) {
+          totalCostEl.textContent = formatVND(calc.totalCost);
+        }
+
+        const pickupPreviewBadgeEl = document.getElementById('pickupPreviewBadge');
+        if (pickupPreviewBadgeEl) {
+          pickupPreviewBadgeEl.textContent = `📍 ${cfg.pickupLocation}`;
+        }
+
+        const costPickupDetailEl = document.getElementById('costPickupDetail');
+        if (costPickupDetailEl) {
+          costPickupDetailEl.textContent = cfg.pickupLocation;
+        }
+
+        document.querySelectorAll('.color-option-card').forEach((card) => {
+          const input = card.querySelector('input[type="radio"]');
+          if (input && input.checked) {
+            card.className =
+              'relative flex items-center justify-between p-3.5 rounded-xl border-2 border-red-600 bg-red-50/50 cursor-pointer transition-all color-option-card';
+          } else {
+            card.className =
+              'relative flex items-center justify-between p-3.5 rounded-xl border-2 border-gray-200 hover:border-red-300 bg-white cursor-pointer transition-all color-option-card';
+          }
+        });
+
+        document.querySelectorAll('.side-option-card').forEach((card) => {
+          const input = card.querySelector('input[type="radio"]');
+          if (input && input.checked) {
+            card.className =
+              'flex items-center justify-center gap-2 p-2.5 rounded-xl border-2 border-red-600 bg-red-50/70 cursor-pointer text-sm font-bold text-red-800 side-option-card';
+          } else {
+            card.className =
+              'flex items-center justify-center gap-2 p-2.5 rounded-xl border border-gray-200 hover:border-red-400 cursor-pointer text-sm font-medium bg-white side-option-card';
+          }
+        });
+      }
+
+      async function handleOrderSubmit(e) {
+        e.preventDefault();
+
+        const studentName = (document.getElementById('studentName')?.value || '').trim();
+        const studentId = (document.getElementById('studentId')?.value || '').trim();
+        const studentPhone = (document.getElementById('studentPhone')?.value || '').trim();
+        const studentClass = (document.getElementById('studentClass')?.value || '').trim();
+
+        if (!studentName || !studentId || !studentPhone) {
+          showToast('Vui lòng nhập đầy đủ Họ tên sinh viên, Mã sinh viên PTIT và SĐT liên hệ.', 'warning');
+          return;
+        }
+
+        const cleanPhone = studentPhone.replace(/[\s.-]/g, '');
+        if (!/^(0|\+84)[0-9]{8,10}$/.test(cleanPhone)) {
+          showToast('SĐT liên hệ chưa hợp lệ. Vui lòng nhập số điện thoại Việt Nam (VD: 0987654321).', 'warning');
+          return;
+        }
+
+        if (uploadedFiles.length === 0) {
+          showToast('Vui lòng chọn ít nhất 1 tài liệu hoặc bấm "Nạp tài liệu mẫu PTIT".', 'warning');
+          return;
+        }
+
+        const cfg = getCurrentPrintConfig();
+        const calc = calculateCostDetails(cfg);
+
+        let newCode;
+        const newOrder = {
+          code: '',
+          studentName,
+          studentId,
+          studentPhone,
+          studentClass,
+          materialCategory: cfg.materialCategory,
+          files: uploadedFiles.map((f) => ({
+            name: f.name,
+            sizeLabel: f.sizeLabel,
+            pages: f.pages
+          })),
+          totalPages: cfg.totalPages,
+          printColor: cfg.printColor,
+          paperSize: cfg.paperSize,
+          printSides: cfg.printSides,
+          bindingType: cfg.bindingType,
+          copiesCount: cfg.copiesCount,
+          campusKey: cfg.campusKey,
+          pickupLocation: cfg.pickupLocation,
+          pickupSlot: cfg.pickupSlot,
+          paymentMethod: cfg.paymentMethod,
+          note: cfg.note,
+          estimatedCost: calc.totalCost,
+          status: 'Chờ in',
+          createdAt: 'Vừa xong'
+        };
+
+        if (cloudEnabled) {
+          try {
+            const savedOrder = await submitCloudOrder(newOrder);
+            Object.assign(newOrder, savedOrder);
+            newCode = savedOrder.code;
+            trackedPhone = cleanPhone;
+            showToast('Đã tạo đơn. Đang tải nội dung tài liệu lên hệ thống...', 'info');
+            const storedFiles = await uploadOrderFiles(newCode, cleanPhone);
+            newOrder.files = storedFiles;
+          } catch (err) {
+            if (newCode) {
+              showToast(`Đơn ${newCode} đã được tạo nhưng tải file chưa hoàn tất: ${err.message || 'Lỗi Storage'}. Đừng gửi lại đơn; liên hệ quản trị để kiểm tra.`, 'warning');
+            } else {
+              showToast('Chưa lưu được đơn lên hệ thống: ' + (err.message || 'Lỗi kết nối Supabase'), 'warning');
+            }
+            return;
+          }
+        } else {
+          showToast('Website chưa kết nối Supabase nên không thể lưu file để quản trị tải xuống. Vui lòng thử lại khi trạng thái đám mây đã kết nối.', 'warning');
+          return;
+        }
+        newOrder.isOwnOrder = true;
+        orders.unshift(newOrder);
+        selfCreatedOrderCodes.add(newCode);
+        if (!cloudEnabled) persistOrdersState();
+        renderOrdersList();
+
+        uploadedFiles = [];
+        renderFileList();
+        updateCostEstimate();
+
+        showToast(`Đặt in PTIT thành công! Mã đơn của bạn là ${newCode}.`, 'success');
+
+        if (cfg.paymentMethod === 'Chuyển khoản xác nhận trước') {
+          openOrderDetailModal(newCode);
+        } else {
+          document.getElementById('trackOrderPhone').value = cleanPhone;
+          document.getElementById('tra-cuu')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+
+      function getStatusBadgeClass(status) {
+        switch (status) {
+          case 'Sẵn sàng nhận tại trường':
+            return 'bg-red-600 text-white border-red-700';
+          case 'Đã nhận':
+            return 'bg-emerald-600 text-white border-emerald-700';
+          case 'Đang in':
+            return 'bg-red-100 text-red-800 border-red-300';
+          case 'Đã hủy':
+            return 'bg-white text-gray-600 border-gray-300';
+          default:
+            return 'bg-red-50 text-red-700 border-red-200';
+        }
+      }
+
+      const ORDER_TRACKABLE_STATUSES = [
+        'Chờ in',
+        'Đang in',
+        'Sẵn sàng nhận tại trường',
+        'Đã nhận'
+      ];
+
+      function renderOrdersList() {
+        const container = document.getElementById('ordersListContainer');
+        const navCountEl = document.getElementById('navOrderCount');
+        if (!container) return;
+
+        if (navCountEl) {
+          navCountEl.textContent = String(orders.length);
+        }
+
+        const q = searchQuery.trim().toLowerCase();
+        const filtered = orders.filter((order) => {
+          const isTrackedStatus = ORDER_TRACKABLE_STATUSES.includes(order.status) || order.status === 'Đã hủy';
+          const matchesStatus =
+            activeStatusFilter === 'ALL'
+              ? isTrackedStatus
+              : order.status === activeStatusFilter && ORDER_TRACKABLE_STATUSES.includes(order.status);
+          const matchesCampus = activeCampusFilter === 'ALL' || order.campusKey === activeCampusFilter;
+          const ownOrder = isSelfOrder(order);
+          const matchesSearch =
+            !q ||
+            order.code.toLowerCase().includes(q) ||
+            order.studentName.toLowerCase().includes(q) ||
+            (ownOrder && order.studentId.toLowerCase().includes(q)) ||
+            (ownOrder && order.studentPhone && order.studentPhone.toLowerCase().includes(q)) ||
+            (order.studentClass && order.studentClass.toLowerCase().includes(q)) ||
+            (order.pickupLocation && order.pickupLocation.toLowerCase().includes(q));
+          return matchesStatus && matchesCampus && matchesSearch;
+        });
+
+        if (filtered.length === 0) {
+          container.innerHTML = `
+            <div class="col-span-full bg-white rounded-2xl border border-red-100 p-8 text-center space-y-2">
+              <p class="text-base font-bold text-gray-900">Không tìm thấy đơn đặt in PTIT phù hợp</p>
+              <p class="text-sm text-gray-600">Thử tìm theo mã đơn PTIT-2026-..., tên sinh viên hoặc đổi bộ lọc trạng thái.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = filtered
+          .map((order) => {
+            const colorText = order.printColor === 'color' ? 'In màu' : 'In đen trắng';
+            const sideText = order.printSides === '2' ? 'In 2 mặt' : 'In 1 mặt';
+            const canCancel = (order.status === 'Chờ in' || order.status === 'Đang in') && (adminSignedIn || isSelfOrder(order));
+            const ownOrder = isSelfOrder(order);
+            const shownStudentId = (adminSignedIn || ownOrder)
+              ? (order.studentId || '••') : maskLastTwo(order.studentId);
+            const shownPhone = (adminSignedIn || ownOrder)
+              ? (order.studentPhone || '') : maskLastThree(order.studentPhone);
+            const shownFileName = (adminSignedIn || ownOrder)
+              ? (order.files?.[0]?.name || 'Tài liệu') : 'Tên tài liệu đã ẩn';
+
+            return `
+              <div class="bg-white rounded-2xl border border-red-100 p-5 shadow-card surface-card flex flex-col justify-between gap-4 animate-fade-in-up">
+                <div class="space-y-3">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <span class="text-xs font-extrabold tracking-wide text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-lg">${escapeHTML(order.code)}</span>
+                      <p class="text-xs text-gray-500 mt-1">${escapeHTML(order.createdAt)}${ownOrder ? ' • Đơn của bạn' : ''}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusBadgeClass(order.status)}">
+                      ${escapeHTML(order.status)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 class="text-base font-bold text-gray-900">${escapeHTML(order.studentName)}</h3>
+                    <p class="text-xs text-gray-600">Mã SV: <strong>${escapeHTML(shownStudentId)}</strong>${order.studentClass ? ` • Lớp: <strong class="text-gray-800">${escapeHTML(order.studentClass)}</strong>` : ''}</p>
+                    ${shownPhone ? `<p class="text-xs text-gray-600 mt-0.5">SĐT liên hệ: <strong class="text-red-700">${escapeHTML(shownPhone)}</strong></p>` : ''}
+                  </div>
+
+                  <div class="p-3 rounded-xl bg-red-50/45 border border-red-100 text-xs text-gray-700 space-y-1.5">
+                    <p class="font-semibold text-red-800">${escapeHTML(order.materialCategory || 'Tài liệu học tập PTIT')}</p>
+                    <p class="font-semibold text-gray-900 truncate">
+                      📄 ${escapeHTML(shownFileName)} ${order.files.length > 1 ? `(+${order.files.length - 1} file)` : ''}
+                    </p>
+                    <p>${order.totalPages} trang • ${order.copiesCount} bộ • ${order.paperSize} • ${colorText} (${sideText})</p>
+                    <p class="text-red-700 font-semibold">📍 ${escapeHTML(order.pickupLocation)}</p>
+                    <p class="text-gray-700">🕒 ${escapeHTML(order.pickupSlot)}</p>
+                  </div>
+                </div>
+
+                <div class="pt-3 border-t border-red-100 flex items-center justify-between gap-2">
+                  <div>
+                    <span class="text-[11px] text-gray-500 block">Tạm tính</span>
+                    <span class="text-base font-extrabold text-gray-900">${formatVND(order.estimatedCost)}</span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      data-detail-code="${escapeHTML(order.code)}"
+                      class="view-detail-btn px-3 py-2 rounded-xl text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                    >
+                      Xem chi tiết
+                    </button>
+                    ${
+                      adminSignedIn && order.status === 'Sẵn sàng nhận tại trường'
+                        ? `<button
+                            type="button"
+                            data-received-code="${escapeHTML(order.code)}"
+                            class="mark-received-btn px-3 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+                          >
+                            Xác nhận đã nhận
+                          </button>`
+                        : ''
+                    }
+                    ${
+                      canCancel
+                        ? `<button
+                            type="button"
+                            data-cancel-code="${escapeHTML(order.code)}"
+                            class="cancel-order-btn px-3 py-2 rounded-xl text-xs font-bold text-red-800 bg-white border border-red-200 hover:bg-red-50 transition-colors"
+                          >
+                            Hủy đơn
+                          </button>`
+                        : ''
+                    }
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+        container.querySelectorAll('.view-detail-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            openOrderDetailModal(e.currentTarget.getAttribute('data-detail-code'));
+          });
+        });
+
+        container.querySelectorAll('.mark-received-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const code = e.currentTarget.getAttribute('data-received-code');
+            const target = orders.find((o) => o.code === code);
+            if (target && adminSignedIn) {
+              (async () => {
+                const { error } = await supabaseClient.from('ptit_orders').update({ status: 'Đã nhận' }).eq('code', code);
+                if (error) { showToast('Không cập nhật được trạng thái: ' + error.message, 'warning'); return; }
+                target.status = 'Đã nhận'; target.order_data = { ...(target.order_data || target), status: 'Đã nhận' };
+                renderOrdersList();
+                showToast(`Đã cập nhật đơn ${code} sang trạng thái "Đã nhận".`, 'success');
+              })();
+            }
+          });
+        });
+
+        container.querySelectorAll('.cancel-order-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const code = e.currentTarget.getAttribute('data-cancel-code');
+            const target = orders.find((o) => o.code === code);
+            if (target) {
+              (async () => {
+                try {
+                  if (adminSignedIn) {
+                    const { error } = await supabaseClient.from('ptit_orders').update({ status: 'Đã hủy' }).eq('code', code);
+                    if (error) throw error;
+                    target.status = 'Đã hủy';
+                  } else if (cloudEnabled) {
+                    await cancelCloudOrder(code);
+                  } else {
+                    target.status = 'Đã hủy'; persistOrdersState();
+                  }
+                  renderOrdersList();
+                  showToast(`Đã hủy đơn ${code}.`, 'info');
+                } catch (err) { showToast('Không hủy được đơn: ' + err.message, 'warning'); }
+              })();
+            }
+          });
+        });
+      }
+
+      function openOrderDetailModal(code) {
+        const order = orders.find((o) => o.code === code);
+        const modal = document.getElementById('orderDetailModal');
+        const titleEl = document.getElementById('modalOrderCode');
+        const bodyEl = document.getElementById('modalOrderBody');
+
+        if (!order || !modal || !titleEl || !bodyEl) return;
+
+        const ownOrder = isSelfOrder(order);
+        const shownStudentId = (adminSignedIn || ownOrder)
+          ? (order.studentId || '••') : maskLastTwo(order.studentId);
+        const shownPhone = (adminSignedIn || ownOrder)
+          ? (order.studentPhone || 'Đã ẩn') : maskLastThree(order.studentPhone);
+
+
+        titleEl.textContent = `${order.code} • ${order.status}`;
+        const filesHtml = (order.files || [])
+          .map((f, idx) => `<li class="flex flex-wrap items-center justify-between gap-2 text-xs py-2 border-b border-slate-100 last:border-0"><span>${escapeHTML((adminSignedIn || ownOrder) ? f.name : 'Tên tài liệu đã ẩn')} <strong class="ml-1">${f.pages} trang</strong></span>${adminSignedIn && f.storagePath ? `<button type="button" class="download-order-file px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold hover:bg-red-700" data-storage-path="${escapeHTML(f.storagePath)}" data-file-name="${escapeHTML(f.name)}">Tải file</button>` : (adminSignedIn ? '<span class="text-amber-700">Chưa có file gốc</span>' : '')}</li>`)
+          .join('');
+
+        bodyEl.innerHTML = `
+          <div class="grid grid-cols-2 gap-2 text-xs bg-red-50/60 border border-red-100 p-3 rounded-xl">
+            <div><span class="text-gray-500 block">Sinh viên PTIT</span><strong>${escapeHTML(order.studentName)}</strong></div>
+            <div><span class="text-gray-500 block">Mã SV / Lớp</span><strong>${escapeHTML(shownStudentId)}${order.studentClass ? ` (${escapeHTML(order.studentClass)})` : ''}</strong></div>
+            <div class="col-span-2"><span class="text-gray-500 block">SĐT liên hệ</span><strong class="text-red-700">${escapeHTML(shownPhone)}</strong></div>
+            <div><span class="text-gray-500 block">Điểm nhận</span><strong>${escapeHTML(order.pickupLocation)}</strong></div>
+            <div><span class="text-gray-500 block">Khung giờ</span><strong>${escapeHTML(order.pickupSlot)}</strong></div>
+          </div>
+
+          <div>
+            <p class="text-xs font-bold uppercase text-gray-600 mb-1.5">Nhóm tài liệu: ${escapeHTML(order.materialCategory || 'Tài liệu học tập PTIT')} (${order.totalPages} trang × ${order.copiesCount} bộ)</p>
+            <ul class="rounded-xl border border-red-100 px-3 py-1 bg-white">${filesHtml}</ul>
+          </div>
+
+          <div class="text-xs space-y-1">
+            <p><strong>Quy cách:</strong> ${order.printColor === 'color' ? 'In màu' : 'In đen trắng'}, khổ ${order.paperSize}, ${order.printSides === '2' ? 'In 2 mặt' : 'In 1 mặt'}, ${PRICING.bindingFee[order.bindingType]?.label || 'Không đóng gáy'}</p>
+            <p><strong>Thanh toán:</strong> ${escapeHTML(order.paymentMethod)}</p>
+            ${order.note ? `<p><strong>Ghi chú:</strong> ${escapeHTML(order.note)}</p>` : ''}
+          </div>
+
+          <div class="pt-2 border-t border-red-100 flex items-center justify-between">
+            <span class="text-xs font-semibold text-gray-600">Tổng chi phí tạm tính</span>
+            <span class="text-lg font-extrabold text-red-600">${formatVND(order.estimatedCost)}</span>
+          </div>
+
+          <div id="modalTransferQrBox" class="hidden pt-3 border-t border-red-100 space-y-3">
+            <div class="p-3.5 rounded-xl bg-red-50 border border-red-200 space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-extrabold uppercase tracking-wide text-red-700">Thông tin chuyển khoản xác nhận trước</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-red-600 text-white">VietQR • Napas 247</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-800">
+                <div><span class="text-gray-500 block">Chủ tài khoản</span><strong class="text-gray-900">DAO TRI CHUNG</strong></div>
+                <div><span class="text-gray-500 block">Số tài khoản</span><strong class="text-red-700 select-all">0866629569</strong></div>
+                <div><span class="text-gray-500 block">Kênh thanh toán</span><strong>VietQR / Napas 247</strong></div>
+                <div><span class="text-gray-500 block">Số tiền chuyển</span><strong id="qrAmountText" class="text-red-700">0đ</strong></div>
+              </div>
+              <div class="pt-1 text-xs">
+                <span class="text-gray-500">Nội dung chuyển khoản:</span>
+                <code id="qrTransferContent" class="ml-1 px-2 py-0.5 rounded bg-white border border-red-200 font-bold text-red-800 select-all"></code>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center p-4 rounded-xl border border-red-200 bg-gradient-to-b from-sky-50/70 to-white text-center space-y-2.5">
+              <div class="w-56 rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-3.5 py-2.5 bg-slate-50/90 border-b border-slate-100 text-left">
+                  <p class="text-[11px] font-extrabold tracking-wide text-slate-800 uppercase">DAO TRI CHUNG</p>
+                  <p class="text-sm font-extrabold text-slate-900 tracking-wider select-all">0866629569</p>
+                </div>
+                <div class="p-3 flex items-center justify-center">
+                  <img
+                    id="modalTransferQrImg"
+                    src=""
+                    alt="Mã QR chuyển khoản DAO TRI CHUNG - 0866629569"
+                    class="w-44 h-44 rounded-lg object-contain bg-white"
+                  />
+                  <canvas
+                    id="modalTransferQrCanvas"
+                    width="176"
+                    height="176"
+                    class="hidden w-44 h-44 rounded-lg bg-white"
+                  ></canvas>
+                </div>
+                <div class="px-3.5 py-2 border-t border-slate-100 flex items-center justify-between text-[11px] font-extrabold">
+                  <span class="text-red-600 tracking-tight">VIET<span class="text-blue-900">QR</span></span>
+                  <span class="text-blue-900 italic">napas <span class="text-emerald-600 not-italic">247</span></span>
+                </div>
+              </div>
+              <p class="text-[11px] text-gray-600">
+                Quét mã QR chuyển khoản tới <strong class="text-gray-900">DAO TRI CHUNG • 0866629569</strong> với đúng số tiền &amp; nội dung đơn để xác nhận nhanh.
+              </p>
+            </div>
+          </div>
+        `;
+
+        bodyEl.querySelectorAll('.download-order-file').forEach((button) => {
+          button.addEventListener('click', () => downloadOrderFile(
+            button.getAttribute('data-storage-path'), button.getAttribute('data-file-name'), button
+          ));
+        });
+
+        const qrBox = bodyEl.querySelector('#modalTransferQrBox');
+        if (qrBox && order.paymentMethod === 'Chuyển khoản xác nhận trước') {
+          const transferNote = `${order.code} ${order.studentId}`;
+          const accountNumber = '0866629569';
+          const accountName = 'DAO TRI CHUNG';
+          const amountVal = Math.max(0, Math.round(Number(order.estimatedCost) || 0));
+          const payloadText = `VIETQR|NAPAS247|${accountNumber}|${accountName}|${amountVal}VND|${transferNote}`;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&ecc=M&data=${encodeURIComponent(payloadText)}`;
+
+          const qrImg = bodyEl.querySelector('#modalTransferQrImg');
+          const qrCanvas = bodyEl.querySelector('#modalTransferQrCanvas');
+          const qrAmountEl = bodyEl.querySelector('#qrAmountText');
+          const qrContentEl = bodyEl.querySelector('#qrTransferContent');
+
+          const renderLocalQrFallback = () => {
+            if (!qrCanvas) return;
+            const ctx = qrCanvas.getContext('2d');
+            if (!ctx) return;
+            const size = qrCanvas.width;
+            const grid = 21;
+            const cell = Math.floor(size / grid);
+            const offset = Math.floor((size - grid * cell) / 2);
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, size, size);
+
+            const drawFinder = (gx, gy) => {
+              ctx.fillStyle = '#111827';
+              ctx.fillRect(offset + gx * cell, offset + gy * cell, cell * 7, cell * 7);
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(offset + (gx + 1) * cell, offset + (gy + 1) * cell, cell * 5, cell * 5);
+              ctx.fillStyle = '#111827';
+              ctx.fillRect(offset + (gx + 2) * cell, offset + (gy + 2) * cell, cell * 3, cell * 3);
+            };
+
+            drawFinder(0, 0);
+            drawFinder(grid - 7, 0);
+            drawFinder(0, grid - 7);
+
+            let hash = 2166136261;
+            for (let i = 0; i < payloadText.length; i++) {
+              hash ^= payloadText.charCodeAt(i);
+              hash = Math.imul(hash, 16777619);
+            }
+
+            ctx.fillStyle = '#111827';
+            for (let r = 0; r < grid; r++) {
+              for (let c = 0; c < grid; c++) {
+                const inTopLeft = r < 8 && c < 8;
+                const inTopRight = r < 8 && c >= grid - 8;
+                const inBottomLeft = r >= grid - 8 && c < 8;
+                if (inTopLeft || inTopRight || inBottomLeft) continue;
+
+                const bitIdx = (r * grid + c) % 31;
+                const mix = ((hash >>> bitIdx) ^ (r * 13 + c * 7 + amountVal)) & 1;
+                if (mix === 1) {
+                  ctx.fillRect(offset + c * cell, offset + r * cell, cell - 0.5, cell - 0.5);
+                }
+              }
+            }
+
+            if (qrImg) qrImg.classList.add('hidden');
+            qrCanvas.classList.remove('hidden');
+          };
+
+          if (qrAmountEl) qrAmountEl.textContent = formatVND(amountVal);
+          if (qrContentEl) qrContentEl.textContent = transferNote;
+          if (qrImg) {
+            qrImg.classList.remove('hidden');
+            if (qrCanvas) qrCanvas.classList.add('hidden');
+            qrImg.onerror = renderLocalQrFallback;
+            qrImg.src = qrUrl;
+          } else {
+            renderLocalQrFallback();
+          }
+
+          qrBox.classList.remove('hidden');
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+
+      function closeOrderDetailModal() {
+        const modal = document.getElementById('orderDetailModal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const loadSampleBtn = document.getElementById('loadSampleFilesBtn');
+
+        if (dropZone && fileInput) {
+          dropZone.addEventListener('click', () => fileInput.click());
+          dropZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInput.click();
+            }
+          });
+
+          ['dragenter', 'dragover'].forEach((evtName) => {
+            dropZone.addEventListener(evtName, (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dropZone.classList.add('dropzone-active');
+            });
+          });
+
+          ['dragleave', 'drop'].forEach((evtName) => {
+            dropZone.addEventListener(evtName, (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              dropZone.classList.remove('dropzone-active');
+            });
+          });
+
+          dropZone.addEventListener('drop', (e) => {
+            if (e.dataTransfer && e.dataTransfer.files) {
+              addFilesToList(e.dataTransfer.files);
+            }
+          });
+
+          fileInput.addEventListener('change', (e) => {
+            if (e.target.files) {
+              addFilesToList(e.target.files);
+              e.target.value = '';
+            }
+          });
+        }
+
+        if (loadSampleBtn) {
+          loadSampleBtn.addEventListener('click', loadSampleFiles);
+        }
+
+        const copiesInput = document.getElementById('copiesCount');
+        const decBtn = document.getElementById('decreaseCopiesBtn');
+        const incBtn = document.getElementById('increaseCopiesBtn');
+
+        if (decBtn && copiesInput) {
+          decBtn.addEventListener('click', () => {
+            const cur = parseInt(copiesInput.value, 10) || 1;
+            if (cur > 1) {
+              copiesInput.value = cur - 1;
+              updateCostEstimate();
+            }
+          });
+        }
+
+        if (incBtn && copiesInput) {
+          incBtn.addEventListener('click', () => {
+            const cur = parseInt(copiesInput.value, 10) || 1;
+            if (cur < 100) {
+              copiesInput.value = cur + 1;
+              updateCostEstimate();
+            }
+          });
+        }
+
+        const configInputs = document.querySelectorAll(
+          'input[name="printColor"], input[name="printSides"], #paperSize, #bindingType, #copiesCount, #ngocTrucPoint, #tranPhuFloor, #pickupDate, #pickupHour, #pickupMinute'
+        );
+        configInputs.forEach((el) => {
+          el.addEventListener('change', () => {
+            getFormattedPickupSchedule(true);
+            updateCostEstimate();
+          });
+          el.addEventListener('input', () => {
+            getFormattedPickupSchedule(false);
+            updateCostEstimate();
+          });
+        });
+
+        const pickupHourSelect = document.getElementById('pickupHour');
+        if (pickupHourSelect) {
+          pickupHourSelect.addEventListener('change', (e) => {
+            rebuildMinuteOptionsForHour(e.target.value);
+            getFormattedPickupSchedule(true);
+            updateCostEstimate();
+          });
+        }
+
+        document.querySelectorAll('input[name="ptitCampus"]').forEach((radio) => {
+          radio.addEventListener('change', () => {
+            updatePickupHierarchyUI();
+            updateCostEstimate();
+          });
+        });
+
+        const tranPhuBuildingSelect = document.getElementById('tranPhuBuilding');
+        if (tranPhuBuildingSelect) {
+          tranPhuBuildingSelect.addEventListener('change', (e) => {
+            syncFloorOptionsForBuilding(e.target.value);
+            updateCostEstimate();
+          });
+        }
+
+        const resetConfigBtn = document.getElementById('resetConfigBtn');
+        if (resetConfigBtn) {
+          resetConfigBtn.addEventListener('click', () => {
+            const bwRadio = document.querySelector('input[name="printColor"][value="bw"]');
+            const twoSidedRadio = document.querySelector('input[name="printSides"][value="2"]');
+            const tranPhuRadio = document.querySelector('input[name="ptitCampus"][value="tran_phu"]');
+            if (bwRadio) bwRadio.checked = true;
+            if (twoSidedRadio) twoSidedRadio.checked = true;
+            if (tranPhuRadio) tranPhuRadio.checked = true;
+            document.getElementById('paperSize').value = 'A4';
+            document.getElementById('bindingType').value = 'none';
+            document.getElementById('copiesCount').value = '1';
+            document.getElementById('tranPhuBuilding').value = 'A1';
+            syncFloorOptionsForBuilding('A1');
+            document.getElementById('tranPhuFloor').value = '1';
+            initDefaultPickupDateTime();
+            document.getElementById('printNote').value = '';
+            updatePickupHierarchyUI();
+            getFormattedPickupSchedule(false);
+            updateCostEstimate();
+            showToast('Đã đặt lại cấu hình in mặc định.', 'info');
+          });
+        }
+
+        const orderForm = document.getElementById('printOrderForm');
+        if (orderForm) {
+          orderForm.addEventListener('submit', handleOrderSubmit);
+        }
+
+        const searchInput = document.getElementById('searchOrderInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (searchInput) {
+          searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            if (clearSearchBtn) {
+              clearSearchBtn.classList.toggle('hidden', !searchQuery.trim());
+            }
+            renderOrdersList();
+          });
+        }
+
+        if (clearSearchBtn && searchInput) {
+          clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.classList.add('hidden');
+            renderOrdersList();
+          });
+        }
+
+        document.querySelectorAll('.status-filter-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const status = e.currentTarget.getAttribute('data-status') || 'ALL';
+            activeStatusFilter = status;
+
+            document.querySelectorAll('.status-filter-btn').forEach((b) => {
+              const isSelected = b.getAttribute('data-status') === status;
+              b.className = isSelected
+                ? 'status-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold bg-red-600 text-white transition-all'
+                : 'status-filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-gray-700 border border-red-200 hover:border-red-400 hover:text-red-700 transition-all';
+            });
+
+            renderOrdersList();
+          });
+        });
+
+        document.querySelectorAll('.campus-filter-btn').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
+            const campus = e.currentTarget.getAttribute('data-campus') || 'ALL';
+            activeCampusFilter = campus;
+
+            document.querySelectorAll('.campus-filter-btn').forEach((b) => {
+              const isSelected = b.getAttribute('data-campus') === campus;
+              b.className = isSelected
+                ? 'campus-filter-btn px-3 py-1.5 rounded-lg font-bold bg-red-600 text-white transition-colors'
+                : 'campus-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-red-50 text-red-800 border border-red-200 hover:bg-red-100 transition-colors';
+            });
+
+            renderOrdersList();
+          });
+        });
+
+        document.getElementById('adminLoginBtn')?.addEventListener('click', async () => {
+          if (!supabaseClient) { showToast('Chưa cấu hình Supabase URL và anon key trong mã HTML.', 'warning'); return; }
+          const email = document.getElementById('adminEmail').value.trim();
+          const password = document.getElementById('adminPassword').value;
+          if (!email || !password) { showToast('Nhập email và mật khẩu quản trị.', 'warning'); return; }
+          const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) { showToast('Đăng nhập thất bại: ' + error.message, 'warning'); return; }
+          const { data: userData } = await supabaseClient.auth.getUser();
+          const { data: adminRow } = await supabaseClient.from('ptit_admin_users').select('user_id').eq('user_id', userData.user.id).maybeSingle();
+          if (!adminRow) { await supabaseClient.auth.signOut(); showToast('Tài khoản này chưa được cấp quyền quản trị.', 'warning'); return; }
+          adminSignedIn = true; updateAdminPanel();
+          try { await loadCloudAdminOrders(); subscribeAdminOrders(); setCloudStatus('Đã đăng nhập quản trị. Dữ liệu đơn hàng đã đồng bộ.', true); }
+          catch (err) { showToast('Không tải được đơn hàng: ' + err.message, 'warning'); }
+        });
+        document.getElementById('adminLogoutBtn')?.addEventListener('click', async () => {
+          if (supabaseClient) await supabaseClient.auth.signOut();
+          adminSignedIn = false;
+          if (orderRealtimeChannel) { supabaseClient.removeChannel(orderRealtimeChannel); orderRealtimeChannel = null; }
+          updateAdminPanel();
+          try { await loadCloudPublicOrders(); }
+          catch (err) { showToast('Đã đăng xuất nhưng chưa tải được danh sách công khai: ' + err.message, 'warning'); }
+          setCloudStatus('Đã đăng xuất quản trị. Thông tin khách hàng khác được ẩn.', cloudEnabled);
+        });
+        document.getElementById('trackOrderBtn')?.addEventListener('click', trackCloudOrder);
+        document.getElementById('trackOrderPhone')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') trackCloudOrder(); });
+
+        document.getElementById('closeModalBtn')?.addEventListener('click', closeOrderDetailModal);
+        document.getElementById('closeModalFooterBtn')?.addEventListener('click', closeOrderDetailModal);
+        document.getElementById('orderDetailModal')?.addEventListener('click', (e) => {
+          if (e.target.id === 'orderDetailModal') closeOrderDetailModal();
+        });
+
+        const visualBtn = document.getElementById('toggleVisualModeBtn');
+        if (visualBtn) {
+          visualBtn.addEventListener('click', () => {
+            document.body.classList.toggle('high-contrast-mode');
+            const isHigh = document.body.classList.contains('high-contrast-mode');
+            showToast(
+              isHigh ? 'Đã bật chế độ hiển thị tương phản cao.' : 'Đã về chế độ hiển thị chuẩn.',
+              'info'
+            );
+          });
+        }
+
+        // Khởi tạo bộ chọn ngày/giờ trước, không phụ thuộc vào kết nối Supabase.
+        // Nhờ vậy nếu RPC hoặc mạng lỗi, khách vẫn chọn được giờ nhận tài liệu.
+        populatePickupTimeSelectors();
+        initDefaultPickupDateTime();
+
+        // Khởi tạo Supabase nền; không chặn giao diện chọn giờ hoặc gửi đơn của khách.
+        initCloudStorage().catch((err) => {
+          console.error('PTIT Print: không khởi tạo được Supabase:', err);
+          cloudEnabled = false;
+          setCloudStatus('Chưa tải được dữ liệu Supabase. Kiểm tra kết nối hoặc cấu hình Supabase.', false);
+          loadPersistedOrdersState();
+          renderOrdersList();
+        });
+        syncFloorOptionsForBuilding('A1');
+        updatePickupHierarchyUI();
+        getFormattedPickupSchedule(false);
+        renderFileList();
+        updateCostEstimate();
+        renderOrdersList();
+      });
+    })();
+  </script>
+</body>
+</html>
